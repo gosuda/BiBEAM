@@ -1,32 +1,32 @@
 [package]
-name         = "bibeam-cli"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "End-user client daemon and CLI."
+name = "bibeam-cli"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "End-user client daemon and CLI."
 
 [[bin]]
 name = "bibeam"
 path = "src/main.rs"
 
 [dependencies]
-bibeam-core        = { workspace = true }
-bibeam-protocol    = { workspace = true }
-bibeam-crypto      = { workspace = true }
-bibeam-transport   = { workspace = true }
-bibeam-tun         = { workspace = true }
-bibeam-discovery   = { workspace = true }
-bibeam-runtime     = { workspace = true }
-tokio              = { workspace = true }
-clap               = { workspace = true }
-figment            = { workspace = true }
-tracing            = { workspace = true }
-tracing-subscriber = { workspace = true }   # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
-thiserror          = { workspace = true }
-anyhow             = { workspace = true }
+bibeam-core = { workspace = true }
+bibeam-protocol = { workspace = true }
+bibeam-crypto = { workspace = true }
+bibeam-transport = { workspace = true }
+bibeam-tun = { workspace = true }
+bibeam-discovery = { workspace = true }
+bibeam-runtime = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+figment = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true } # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 
 [lints]
 workspace = true

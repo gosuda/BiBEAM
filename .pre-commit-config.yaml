@@ -1,0 +1,86 @@
+# .pre-commit-config.yaml — managed by `prek` (Rust-native drop-in for the
+# pre-commit framework). `prek install` arms `.git/hooks/{pre-commit,commit-msg,pre-push}`.
+#
+# Hook-weight policy (per project owner): pre-commit is HEAVIER than pre-push.
+# Rationale — fail the contributor BEFORE they invest in a commit message they
+# will then have to rewrite. Pre-push runs a fast sanity check only. CI is the
+# final authority for cross-OS regressions.
+minimum_pre_commit_version: "3.5.0"
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      # ---- cheap pre-commit checks (sub-second) ----
+      - id: cargo-fmt-check
+        name: cargo fmt --check
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: taplo-fmt-check
+        name: taplo fmt --check
+        entry: taplo fmt --check
+        language: system
+        types: [toml]
+        stages: [pre-commit]
+      - id: typos
+        name: typos
+        entry: typos
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # ---- heavy pre-commit checks (workspace-scope) ----
+      - id: xtask-gen-readmes-check
+        name: xtask gen-readmes --check
+        entry: cargo run -p xtask --release -- gen-readmes --check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-clippy
+        name: cargo clippy -- -D warnings
+        entry: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-nextest
+        name: cargo nextest run
+        entry: cargo nextest run --workspace --all-features
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-deny
+        name: cargo deny check
+        entry: cargo deny check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-machete
+        name: cargo machete
+        entry: cargo machete --skip-target-dir
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-doc
+        name: cargo doc (-D warnings)
+        entry: bash -lc 'RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --no-deps --all-features'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # ---- commit-msg gate (conventional commit format) ----
+      - id: cog-verify
+        name: cog verify
+        entry: cog verify --file
+        language: system
+        stages: [commit-msg]
+
+      # ---- pre-push sanity (intentionally light) ----
+      - id: cargo-check-push
+        name: cargo check (pre-push sanity)
+        entry: cargo check --workspace --all-targets --all-features
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

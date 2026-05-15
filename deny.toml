@@ -1,49 +1,55 @@
 [graph]
-all-features  = true
+all-features = true
 no-default-features = false
 
 [advisories]
-db-path        = "~/.cargo/advisory-dbs"
-db-urls        = ["https://github.com/RustSec/advisory-db"]
-yanked         = "deny"
+db-path = "~/.cargo/advisory-dbs"
+db-urls = ["https://github.com/RustSec/advisory-db"]
+yanked = "deny"
 ignore = [
   # Transitive deps; not directly invoked by first-party code at MVP.
   # Revisit upon first non-stub merge or when deps are upgraded.
-  "RUSTSEC-2026-0119",   # hickory-proto O(n²) name compression CPU exhaustion
-  "RUSTSEC-2026-0009",   # time 0.3.45 RFC 2822 parsing stack exhaustion
-  "RUSTSEC-2024-0436",   # paste 1.0.15 unmaintained
-  "RUSTSEC-2023-0089",   # atomic-polyfill 1.0.3 unmaintained
+  "RUSTSEC-2026-0119", # hickory-proto O(n²) name compression CPU exhaustion
+  "RUSTSEC-2026-0009", # time 0.3.45 RFC 2822 parsing stack exhaustion
+  "RUSTSEC-2024-0436", # paste 1.0.15 unmaintained
+  "RUSTSEC-2023-0089", # atomic-polyfill 1.0.3 unmaintained
 ]
 
 [licenses]
 allow = [
-  "MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception",
-  "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib",
-  "Unicode-3.0", "Unicode-DFS-2016",
-  "MPL-2.0",                # weak copyleft, acceptable for libs
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "MPL-2.0",                        # weak copyleft, acceptable for libs
   "CC0-1.0",
-  "CDLA-Permissive-2.0",   # webpki-roots Mozilla CA bundle data
+  "CDLA-Permissive-2.0",            # webpki-roots Mozilla CA bundle data
 ]
 confidence-threshold = 0.93
 exceptions = []
 
 [bans]
 multiple-versions = "warn"
-wildcards         = "deny"
-highlight         = "all"
+wildcards = "deny"
+highlight = "all"
 deny = [
-  { name = "openssl"     },                # use rustls
+  { name = "openssl" },     # use rustls
   { name = "openssl-sys" },
-  { name = "native-tls"  },                # use rustls
-  { name = "chrono"      },                # use time
-  { name = "failure"     },                # use thiserror
-  { name = "error-chain" },                # use thiserror
+  { name = "native-tls" },  # use rustls
+  { name = "chrono" },      # use time
+  { name = "failure" },     # use thiserror
+  { name = "error-chain" }, # use thiserror
 ]
-skip      = []
+skip = []
 skip-tree = []
 
 [sources]
 unknown-registry = "deny"
-unknown-git      = "deny"
-allow-registry   = ["https://github.com/rust-lang/crates.io-index"]
-allow-git        = []
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

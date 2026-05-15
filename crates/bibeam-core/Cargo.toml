@@ -1,19 +1,19 @@
 [package]
-name         = "bibeam-core"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "Shared types, errors, and identity primitives."
+name = "bibeam-core"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "Shared types, errors, and identity primitives."
 
 [dependencies]
-serde      = { workspace = true }
-thiserror  = { workspace = true }
-ulid       = { workspace = true }
-time       = { workspace = true }
-bytes      = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+ulid = { workspace = true }
+time = { workspace = true }
+bytes = { workspace = true }
 
 [lints]
 workspace = true

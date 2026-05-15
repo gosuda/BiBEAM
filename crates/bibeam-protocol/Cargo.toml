@@ -1,19 +1,19 @@
 [package]
-name         = "bibeam-protocol"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "Wire frames and postcard codec."
+name = "bibeam-protocol"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "Wire frames and postcard codec."
 
 [dependencies]
 bibeam-core = { workspace = true }
-serde       = { workspace = true }
-postcard    = { workspace = true }
-thiserror   = { workspace = true }
-bytes       = { workspace = true }
+serde = { workspace = true }
+postcard = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
 
 [lints]
 workspace = true

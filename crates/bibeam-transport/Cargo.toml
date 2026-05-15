@@ -1,26 +1,26 @@
 [package]
-name         = "bibeam-transport"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "QUIC and Noise datagram tunnel with STUN hole-punching."
+name = "bibeam-transport"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "QUIC and Noise datagram tunnel with STUN hole-punching."
 
 [dependencies]
-bibeam-core     = { workspace = true }
+bibeam-core = { workspace = true }
 bibeam-protocol = { workspace = true }
-bibeam-crypto   = { workspace = true }
-tokio           = { workspace = true }
-tokio-util      = { workspace = true }
-quinn           = { workspace = true }
-quinn-proto     = { workspace = true }
-rustls          = { workspace = true }
-bytes           = { workspace = true }
-futures-util    = { workspace = true }
-thiserror       = { workspace = true }
-tracing         = { workspace = true }
+bibeam-crypto = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+quinn = { workspace = true }
+quinn-proto = { workspace = true }
+rustls = { workspace = true }
+bytes = { workspace = true }
+futures-util = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

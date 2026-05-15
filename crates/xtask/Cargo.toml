@@ -1,25 +1,25 @@
 [package]
-name         = "xtask"
-version      = "0.0.1"
-edition      = { workspace = true }
-license      = { workspace = true }
-publish      = false
-description  = "Workspace ops runner (CI, docs, release helpers)."
-keywords     = { workspace = true }
-categories   = { workspace = true }
+name = "xtask"
+version = "0.0.1"
+edition = { workspace = true }
+license = { workspace = true }
+publish = false
+description = "Workspace ops runner (CI, docs, release helpers)."
+keywords = { workspace = true }
+categories = { workspace = true }
 
 [[bin]]
 name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
-clap      = { workspace = true }
-anyhow    = { workspace = true }
-tracing   = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 # xtask-only: workspace Cargo.toml parser for `gen-readmes`.
 # Do NOT propagate to other crate manifests — only xtask needs it.
-toml      = { workspace = true }
+toml = { workspace = true }
 
 [lints]
 workspace = true

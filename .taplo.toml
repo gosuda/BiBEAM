@@ -1,0 +1,10 @@
+# .taplo.toml — formatter config for https://taplo.tamasfe.dev
+# Accepts taplo's default per-section `=` alignment; pins ordering to
+# "as written" so PRs don't churn on auto-sorted deps or keys.
+[formatting]
+column_width = 200
+array_auto_collapse = true
+array_auto_expand = false
+compact_arrays = true
+reorder_arrays = false
+reorder_keys = false

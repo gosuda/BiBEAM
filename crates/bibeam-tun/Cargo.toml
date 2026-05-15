@@ -1,21 +1,21 @@
 [package]
-name         = "bibeam-tun"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "Cross-platform TUN device wrapper and L3 packet pipeline."
+name = "bibeam-tun"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "Cross-platform TUN device wrapper and L3 packet pipeline."
 
 [dependencies]
 bibeam-core = { workspace = true }
-tokio       = { workspace = true }
-tun-rs      = { workspace = true }
-etherparse  = { workspace = true }
-bytes       = { workspace = true }
-thiserror   = { workspace = true }
-tracing     = { workspace = true }
+tokio = { workspace = true }
+tun-rs = { workspace = true }
+etherparse = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

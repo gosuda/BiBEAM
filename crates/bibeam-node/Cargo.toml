@@ -1,35 +1,35 @@
 [package]
-name         = "bibeam-node"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "Dual-role relay and exit daemon."
+name = "bibeam-node"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "Dual-role relay and exit daemon."
 
 [[bin]]
 name = "bibeam-node"
 path = "src/main.rs"
 
 [dependencies]
-bibeam-core        = { workspace = true }
-bibeam-protocol    = { workspace = true }
-bibeam-crypto      = { workspace = true }
-bibeam-transport   = { workspace = true }
-bibeam-tun         = { workspace = true }
-bibeam-discovery   = { workspace = true }
-bibeam-runtime     = { workspace = true }
-tokio              = { workspace = true }
-tokio-util         = { workspace = true }
-fast-socks5        = { workspace = true }
-hickory-resolver   = { workspace = true }
-clap               = { workspace = true }
-tracing            = { workspace = true }
-tracing-subscriber = { workspace = true }   # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
-thiserror          = { workspace = true }
-anyhow             = { workspace = true }
-mimalloc           = { workspace = true }
+bibeam-core = { workspace = true }
+bibeam-protocol = { workspace = true }
+bibeam-crypto = { workspace = true }
+bibeam-transport = { workspace = true }
+bibeam-tun = { workspace = true }
+bibeam-discovery = { workspace = true }
+bibeam-runtime = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+fast-socks5 = { workspace = true }
+hickory-resolver = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true } # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+mimalloc = { workspace = true }
 
 [lints]
 workspace = true

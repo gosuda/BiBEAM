@@ -1,24 +1,24 @@
 [package]
-name         = "bibeam-discovery"
-version      = { workspace = true }
-edition      = { workspace = true }
-license      = { workspace = true }
-repository   = { workspace = true }
-keywords     = { workspace = true }
-categories   = { workspace = true }
-description  = "Coordinator client and rendezvous types."
+name = "bibeam-discovery"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+description = "Coordinator client and rendezvous types."
 
 [dependencies]
-bibeam-core     = { workspace = true }
+bibeam-core = { workspace = true }
 bibeam-protocol = { workspace = true }
-bibeam-crypto   = { workspace = true }
-tokio           = { workspace = true }
-reqwest         = { workspace = true }
+bibeam-crypto = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
 tokio-tungstenite = { workspace = true }
-serde           = { workspace = true }
-serde_json      = { workspace = true }
-thiserror       = { workspace = true }
-tracing         = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

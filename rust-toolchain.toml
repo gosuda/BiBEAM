@@ -16,13 +16,7 @@
 #     overrides this with an explicit `dtolnay/rust-toolchain@<version>` pin.
 
 [toolchain]
-channel    = "stable"   # latest stable; rustup resolves on `rustup update`
+channel = "stable"                                                                                                                           # latest stable; rustup resolves on `rustup update`
 components = ["rustfmt", "clippy", "rust-analyzer", "rust-src", "llvm-tools-preview"]
-targets = [
-  "x86_64-unknown-linux-gnu",
-  "aarch64-unknown-linux-gnu",
-  "aarch64-apple-darwin",
-  "x86_64-apple-darwin",
-  "x86_64-pc-windows-msvc",
-]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
 profile = "minimal"
