@@ -4,13 +4,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![edition](https://img.shields.io/badge/rust-2024-orange)](./rust-toolchain.toml)
 
-비빔 means *mixing*. BiBEAM is a distributed P2P VPN/proxy in Rust whose central idea is collective IP washing: many users sharing many overseas exits, so any single egress IP carries traffic from dozens of unrelated sessions.
-
-## Why
-
-Korean users hit Cloudflare 451 and SNI-based geo-blocks on a growing list of foreign sites. A lone user behind a single foreign exit is trivially fingerprinted, throttled, or de-anonymized. BiBEAM trades the lone exit for a shared one.
-
-BiBEAM is **not** Tor. See [docs/threat-model.md](./docs/threat-model.md) for what is in and out of scope.
+Bibeam is an open source, collaborative, distributed, E2E, non-exhaustive Peer-To-Peer VPN. Inspired by Korean food "Bibimbap". Also interpreted as Bidirectional-Beam (Bi-Beam); loose Privacy-enhancing Network.
 
 ## Status
 

@@ -14,7 +14,7 @@ The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the arch
 
 ## Adversaries
 
-### Cloudflare and other 451-enforcing destinations
+### Destinations enforcing source-IP / SNI geo-blocks
 
 **Capability.** Observes the source IP of every connection that reaches them. Sees the SNI of TLS handshakes that do not use ECH. Can return 451 / refuse service based on either signal.
 
@@ -121,4 +121,4 @@ And does **not** know:
 - That a coordinator with the BLAKE3 log-key cannot reconstruct user behaviour from its own logs.
 - That a destination service that already fingerprints users (browser-level fingerprinting, login cookies) loses that ability when traffic arrives via BiBEAM. It does not.
 
-BiBEAM raises the cost of identifying a Korean user behind a single foreign exit from "trivial" to "requires correlation across multiple observation points." That is the bargain.
+BiBEAM raises the cost of identifying any single user behind a foreign exit from "trivial" to "requires correlation across multiple observation points." That is the bargain.

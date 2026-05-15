@@ -56,7 +56,7 @@ The shared exit pool follows Model D+: one bucket, K clients egress through M ex
 
 The **anonymity-set floor** is the load-bearing data-plane invariant: at the moment a cohort is admitted to an exit, the cohort must contain at least 30 users. This is enforced coordinator-side at PASETO token issuance — a single auditable point. Between rotations, decay (sessions ending naturally) is bounded by the rotation window and accepted as the MVP trade-off; there is no continuous re-gating. See [`docs/protocol.md`](./protocol.md) for the cohort lifecycle (pending → live → rotation re-pool) and the matching admission rules.
 
-The 451 defense layers:
+The SNI-confidentiality layers:
 
 - **Tunnel concealment from the user's ISP.** The user-to-exit hop is a single QUIC connection carrying Noise-sealed packets. The user's ISP sees the exit's IP and the QUIC handshake — not the destination SNI of the inner traffic. This holds independently of ECH.
 - **Primary, on the exit egress: TLS 1.3 ECH where supported.** When the destination server publishes an ECH config (an HTTPS DNS record with an `ech` parameter), the exit will use ECH so the inner SNI is encrypted on the exit-to-destination hop. ECH is **destination-dependent**: many origins do not yet publish ECH, in which case the inner SNI is visible to on-path observers of the exit's upstream (including, for Cloudflare-fronted destinations, Cloudflare itself). This is a coverage trade-off, not a guarantee.

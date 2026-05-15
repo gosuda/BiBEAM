@@ -4,7 +4,7 @@ This file gives an AI coding assistant the minimum it needs to make a useful fir
 
 ## Quick facts
 
-- **Project.** BiBEAM (브랜드 케이스), 비빔 in Hangul. Identifier `bibeam` (lowercase). Never substitute hanja, never romanize the Hangul to `bibim`.
+- **Project.** BiBEAM (브랜드 케이스), 비빔 in Hangul; also expanded as Bidirectional-Beam (Bi-Beam). The name doubles as etymology (Korean *bibimbap*) and design metaphor (a bidirectional beam linking peers). Identifier `bibeam` (lowercase). Never substitute hanja, never romanize the Hangul to `bibim`.
 - **Edition.** Rust 2024 (`resolver = "3"`).
 - **Toolchain.** Latest stable. **No MSRV pin.** `rust-toolchain.toml` declares `channel = "stable"`. CI runs `dtolnay/rust-toolchain@stable`. There is no nightly, no per-version matrix, no `cargo +nightly` anywhere.
 - **Phase.** Init scaffold (Phase 1). Crate skeletons compile and pass the strict regime; no protocol or transport code exists yet.
