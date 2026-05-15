@@ -8,19 +8,16 @@
 //! ```
 //!
 //! [`encode`] produces that exact byte layout. [`decode`] validates both
-//! [`MAGIC`] and [`VERSION`] before invoking the postcard deserializer; a
-//! mismatched prefix yields a dedicated `postcard::Error` so callers can
-//! reject the buffer without speculatively running serde over potentially
-//! adversarial input.
-//!
-//! Once F-PROTO.7 lands, [`decode`] will surface bad-magic and bad-version
-//! cases through a richer `ProtocolError` enum. For now the signature
-//! returns `postcard::Error` directly to keep the public surface compact
-//! while later sub-items wire up the protocol-level error type.
+//! [`MAGIC`] and [`VERSION`] before invoking the postcard deserializer
+//! and surfaces the two bad-prefix cases as first-class
+//! [`ProtocolError::BadMagic`] and [`ProtocolError::BadVersion`]
+//! variants, so callers do not need to string-sniff a generic codec
+//! error to find the root cause.
 
 use bytes::Bytes;
 use postcard::Error as PostcardError;
 
+use crate::error::ProtocolError;
 use crate::frame::{Frame, MAGIC, VERSION};
 
 /// Size of the fixed envelope prefix written ahead of every postcard
@@ -43,23 +40,25 @@ pub fn encode(frame: &Frame) -> Result<Bytes, PostcardError> {
 
 /// Decode a wire buffer into a [`Frame`].
 ///
-/// Returns an error if the buffer is shorter than the prefix, if the
-/// first four bytes are not [`MAGIC`], or if the version byte does not
-/// equal [`VERSION`]. On a structurally valid prefix the remaining bytes
-/// are handed to `postcard::from_bytes` and any failure there is
-/// propagated unchanged.
-pub fn decode(buf: &[u8]) -> Result<Frame, PostcardError> {
+/// Returns [`ProtocolError::BadMagic`] if the first four bytes are not
+/// [`MAGIC`], [`ProtocolError::BadVersion`] if the version byte does
+/// not equal [`VERSION`], and [`ProtocolError::Codec`] for any
+/// underlying postcard failure (including a buffer shorter than the
+/// prefix, which postcard surfaces as `DeserializeUnexpectedEnd`).
+pub fn decode(buf: &[u8]) -> Result<Frame, ProtocolError> {
     if buf.len() < PREFIX_LEN {
-        return Err(PostcardError::DeserializeUnexpectedEnd);
+        return Err(ProtocolError::Codec(PostcardError::DeserializeUnexpectedEnd));
     }
     if buf[..MAGIC.len()] != MAGIC {
-        // No purpose-built bad-magic variant exists until F-PROTO.7; until
-        // then a generic deserialize error is the closest match in
-        // postcard::Error.
-        return Err(PostcardError::DeserializeBadEncoding);
+        return Err(ProtocolError::BadMagic);
     }
-    if buf[MAGIC.len()] != VERSION {
-        return Err(PostcardError::DeserializeBadEncoding);
+    let version = buf[MAGIC.len()];
+    if version != VERSION {
+        return Err(ProtocolError::BadVersion {
+            got: version,
+            expected: VERSION,
+        });
     }
-    postcard::from_bytes(&buf[PREFIX_LEN..])
+    let frame = postcard::from_bytes(&buf[PREFIX_LEN..])?;
+    Ok(frame)
 }

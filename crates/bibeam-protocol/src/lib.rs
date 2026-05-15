@@ -5,6 +5,7 @@ pub mod claims;
 pub mod codec;
 pub mod cohort;
 pub mod control;
+pub mod error;
 pub mod frame;
 pub mod tunnel;
 
@@ -14,5 +15,6 @@ pub use cohort::{CohortAdmit, CohortLive, CohortMessage, CohortRotate};
 pub use control::{
     ControlMessage, Disconnect, Heartbeat, MatchRequest, MatchResponse, Register, RegisterAck,
 };
+pub use error::ProtocolError;
 pub use frame::{Frame, MAGIC, VERSION};
 pub use tunnel::Tunnel;
