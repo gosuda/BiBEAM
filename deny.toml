@@ -9,8 +9,6 @@ yanked = "deny"
 ignore = [
   # Transitive deps; not directly invoked by first-party code at MVP.
   # Revisit upon first non-stub merge or when deps are upgraded.
-  "RUSTSEC-2026-0119", # hickory-proto O(n²) name compression CPU exhaustion
-  "RUSTSEC-2026-0009", # time 0.3.45 RFC 2822 parsing stack exhaustion
   "RUSTSEC-2024-0436", # paste 1.0.15 unmaintained
   "RUSTSEC-2023-0089", # atomic-polyfill 1.0.3 unmaintained
 ]
