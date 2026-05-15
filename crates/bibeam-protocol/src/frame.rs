@@ -12,8 +12,8 @@
 //!
 //! - [`Frame::Control`] carries the discovery / coordinator control
 //!   messages added in F-PROTO.3,
-//! - [`Frame::Tunnel`] will carry the Noise-sealed IP datagram introduced
-//!   in F-PROTO.4, and
+//! - [`Frame::Tunnel`] carries the Noise-sealed IP datagram added in
+//!   F-PROTO.4, and
 //! - [`Frame::Cohort`] will carry the cohort lifecycle messages introduced
 //!   in F-PROTO.5.
 //!
@@ -22,6 +22,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::control::ControlMessage;
+use crate::tunnel::Tunnel;
 
 /// Four-byte magic prefix written at the start of every `BiBEAM` frame.
 ///
@@ -40,15 +41,15 @@ pub const VERSION: u8 = 1;
 /// Top-level wire frame.
 ///
 /// Concrete payloads land in later sub-items of F-PROTO. The
-/// [`Frame::Control`] variant now carries a [`ControlMessage`]
-/// (F-PROTO.3); the remaining variants are still unit placeholders
-/// awaiting their respective F-PROTO sub-items.
+/// [`Frame::Control`] variant carries a [`ControlMessage`] (F-PROTO.3),
+/// [`Frame::Tunnel`] carries a [`Tunnel`] datagram (F-PROTO.4), and
+/// [`Frame::Cohort`] is still a unit placeholder awaiting F-PROTO.5.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Frame {
     /// Control-plane traffic carrying one [`ControlMessage`].
     Control(ControlMessage),
-    /// Data-plane tunnel datagram. Concrete payload lands in F-PROTO.4.
-    Tunnel,
+    /// Data-plane traffic carrying one [`Tunnel`] datagram.
+    Tunnel(Tunnel),
     /// Cohort lifecycle traffic. Concrete payload lands in F-PROTO.5.
     Cohort,
 }

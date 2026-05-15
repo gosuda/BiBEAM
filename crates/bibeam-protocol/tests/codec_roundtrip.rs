@@ -12,7 +12,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use bibeam_protocol::{
     ControlMessage, Disconnect, Frame, Heartbeat, MatchRequest, MatchResponse, Register,
-    RegisterAck, decode, encode,
+    RegisterAck, Tunnel, decode, encode,
 };
 use bytes::Bytes;
 use proptest::collection::vec;
@@ -102,6 +102,10 @@ fn arb_disconnect() -> impl Strategy<Value = Disconnect> {
         .prop_map(|(peer_id, reason, at)| Disconnect { peer_id, reason, at })
 }
 
+fn arb_tunnel() -> impl Strategy<Value = Tunnel> {
+    (arb_peer_id(), arb_bytes()).prop_map(|(peer_id, payload)| Tunnel { peer_id, payload })
+}
+
 fn arb_control_message() -> impl Strategy<Value = ControlMessage> {
     prop_oneof![
         arb_register().prop_map(ControlMessage::Register),
@@ -120,7 +124,7 @@ fn arb_control_message() -> impl Strategy<Value = ControlMessage> {
 fn arb_frame() -> impl Strategy<Value = Frame> {
     prop_oneof![
         arb_control_message().prop_map(Frame::Control),
-        Just(Frame::Tunnel),
+        arb_tunnel().prop_map(Frame::Tunnel),
         Just(Frame::Cohort),
     ]
 }
