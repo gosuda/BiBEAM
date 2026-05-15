@@ -118,6 +118,13 @@ Each item is a docs-only PR that edits `docs/architecture.md` (or `docs/protocol
 - **Deliverable.** `docs/architecture.md` subsection naming the pick + dismissed alternatives.
 - **Blocks.** F-NODE.4 L3 path.
 
+### D-4 — VPN protocol family (de-facto vs purpose-built)
+
+- **Context.** The plan's data-plane is purpose-built — Noise_IK_25519_ChaChaPoly_BLAKE3 over QUIC datagrams (plan §2 decisions #9, #10). Project-owner direction added mid-stream: *"Use more de-facto VPN protocols and structures for more general availability/compat."* That surfaces a trade-off the plan did not surface — ride an existing wire protocol so existing clients, configs, and tooling interoperate, vs. ship a custom protocol optimized for cohort-mixing. Locking F-CRYPTO.1 and the QUIC-specific F-TRANS sub-items to the custom path without a decision is now speculation.
+- **Options.** (a) **WireGuard wire-compat** — use `boringtun` or a pure-Rust WG implementation as the data plane; the coordinator becomes a discovery + cohort-assignment layer over standard WG. Existing WireGuard clients and configs interoperate. (b) **Custom Noise_IK + QUIC** per the original plan — purpose-built, no off-the-shelf-client compat. (c) **Multi-protocol** — WireGuard as the primary data plane for general clients + custom Noise_IK + QUIC as an opt-in alternate for advanced / latency-sensitive flows. (OpenVPN bridging is **rejected**: OpenVPN's TLS-tunneled-OpenSSL design conflicts with our `rustls`-only + `forbid(unsafe_code)` posture.)
+- **Deliverable.** `docs/architecture.md` subsection naming the pick + dismissed alternatives + a compatibility-vs-control rationale.
+- **Blocks.** F-CRYPTO.1 (Noise IK wrapper — may become WireGuard's Noise_IK exact variant or move into a wg crate). F-TRANS.1, F-TRANS.3, F-TRANS.5, F-TRANS.6 (Quinn endpoint, datagram extension, hole-punch, relay-fallback — semantics differ between WG and custom QUIC). F-NODE.4 (exit path uses whichever data plane D-4 selects).
+
 ---
 
 ## Per-Crate Feature Implementation (dependency-ordered)
@@ -245,6 +252,19 @@ Each per-crate task is the **first non-stub merge** for that crate. Sub-items ar
 - **F-CLI.7** ECH policy exposure — surface whichever policy D-1 selects as a config-visible flag (e.g. `ech = "best-effort" | "deferred" | "skipped"`) and a `status` line for operator visibility; the actual ECH hop (DNS HTTPS record lookup, rustls ECH-extension wiring) lives in F-TRANS.2 (and is consumed at the exit via F-NODE.4 when D-1 places the hop server-side). The CLI consumes the policy; it does **not** load DNS HTTPS records itself.
 - **F-CLI.8** SOCKS5 fallback — when TUN setup fails (no capabilities, restricted environment), expose `127.0.0.1:1080` SOCKS5 over QUIC datagram tunnel.
 - **Gate.** `cargo clippy -p bibeam-cli …` clean + `cargo run --bin bibeam -- --help` and `cargo run --bin bibeam -- version` exit 0 with non-empty stdout.
+
+---
+
+## Strategic Pivots (newly added)
+
+### T-FRAME — Re-frame README and public docs around generic P2P VPN positioning
+
+- **Context.** Per project-owner direction: BiBEAM's *public* framing should be a generically useful P2P VPN, not a Korean-Cloudflare-451-specific tool. The Korean 451 / SNI-geo-block use-case stays as **internal** context (operator runbook, threat-model adversary discussion) but is purged from the README, AGENTS.md, and the top of `docs/architecture.md`.
+- **New public framing (verbatim from project owner).** *"Bibeam is an open source, collaborative, distributed, E2E, non-exhaustive Peer-To-Peer VPN. Inspired by Korean food 'Bibimbap'. Also interpreted as Bidirectional-Beam (Bi-Beam); loose Privacy-enhancing Network."*
+- **Scope.** Edit `README.md` (replace the "Why" Korean-451 paragraph with the new framing; keep the badges + workspace table + reading-order list). Edit `AGENTS.md` "Quick facts" to mention the Bi-Beam alternate expansion. Generalize "Korean users" / "Cloudflare 451" mentions in `docs/architecture.md` and `docs/threat-model.md` to "users in restrictive networks" / "geo-blocks". Leave `docs/operator-runbook.md` Korean-context references intact — the operator runbook is for operators, not the public-facing surface.
+- **Name fidelity preserved.** ASCII identifiers stay `bibeam` / `BiBEAM`; the Hangul `비빔` stays where it currently appears (etymology block); never substitute hanja; never romanize standalone to `bibim`.
+- **Do NOT touch.** `docs/plan/init.md` — that is the as-built planning record; rewriting it would lose historical rationale. `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md` — none reference the Korean use-case directly. (`docs/plan/tasks.md` is a *living* planning document — appending new tasks here is expected; only `init.md` is frozen.)
+- **Gate.** `cargo run -p xtask --release -- gen-readmes --check` exits 0 (per-crate READMEs unaffected — they come from `[package].description`). `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features` clean. Spot-check `grep -rEi "cloudflare-?451|sni-?(based)?-?geo-?block|korean users" README.md AGENTS.md docs/architecture.md docs/threat-model.md` returns no results. (The string `Korean food` is **permitted** in the etymology block per the verbatim framing above; the gate forbids only the use-case-specific phrases.)
 
 ---
 
