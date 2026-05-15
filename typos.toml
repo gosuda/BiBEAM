@@ -1,0 +1,15 @@
+[default]
+extend-ignore-identifiers-re = [
+  "[Bb]i[Bb][Ee][Aa][Mm]",
+  "비빔",
+]
+
+[default.extend-words]
+crate = "crate"
+
+[files]
+extend-exclude = [
+  "CHANGELOG.md",
+  "target/**",
+  "*.lock",
+]

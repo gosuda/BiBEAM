@@ -5,7 +5,7 @@ edition      = { workspace = true }
 rust-version = { workspace = true }
 license      = { workspace = true }
 publish      = false
-description  = "Workspace ops runner for BiBEAM (CI, docs, release helpers)."
+description  = "Workspace ops runner (CI, docs, release helpers)."
 
 [[bin]]
 name = "xtask"

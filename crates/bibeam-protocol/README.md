@@ -1,3 +1,3 @@
 # bibeam-protocol
 
-Wire frames + postcard codec for BiBEAM.
+Wire frames and postcard codec.

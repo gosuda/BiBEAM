@@ -5,7 +5,9 @@ edition      = { workspace = true }
 rust-version = { workspace = true }
 license      = { workspace = true }
 repository   = { workspace = true }
-description  = "QUIC + Noise datagram tunnel + STUN/hole-punch for BiBEAM."
+keywords     = { workspace = true }
+categories   = { workspace = true }
+description  = "QUIC and Noise datagram tunnel with STUN hole-punching."
 
 [dependencies]
 bibeam-core     = { workspace = true }
@@ -23,3 +25,6 @@ tracing         = { workspace = true }
 
 [lints]
 workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "quinn", "quinn-proto", "rustls", "bytes", "futures-util", "thiserror", "tracing"]

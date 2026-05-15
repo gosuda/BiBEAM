@@ -1,0 +1,31 @@
+msrv = "1.89"
+
+# complexity caps (aggressive but workable)
+cognitive-complexity-threshold      = 15
+type-complexity-threshold           = 200
+too-many-arguments-threshold        = 5
+too-many-lines-threshold            = 80
+excessive-nesting-threshold         = 4
+max-fn-params-bools                 = 2
+single-char-binding-names-threshold = 0
+large-error-threshold               = 64
+trivial-copy-size-limit             = 16
+enum-variant-size-threshold         = 128
+
+# test ergonomics
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests  = true
+allow-dbg-in-tests    = true
+allow-print-in-tests  = true
+
+# disallowed APIs (force the better alternative)
+disallowed-methods = [
+  { path = "std::sync::Mutex::lock",   reason = "prefer parking_lot::Mutex" },
+  { path = "std::sync::RwLock::read",  reason = "prefer parking_lot::RwLock" },
+  { path = "std::sync::RwLock::write", reason = "prefer parking_lot::RwLock" },
+]
+disallowed-types = [
+  { path = "chrono::DateTime", reason = "prefer time::OffsetDateTime" },
+]
+disallowed-names = ["foo", "bar", "baz", "tmp", "tmp2", "TODO", "FIXME"]

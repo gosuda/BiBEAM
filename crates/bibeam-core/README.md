@@ -1,3 +1,3 @@
 # bibeam-core
 
-Shared types, errors, identity primitives for BiBEAM.
+Shared types, errors, and identity primitives.

@@ -1,3 +1,3 @@
 # bibeam-crypto
 
-Noise IK + AEAD + PASETO + key mgmt for BiBEAM.
+Noise IK, AEAD, PASETO, and key management.

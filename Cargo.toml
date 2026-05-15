@@ -123,8 +123,8 @@ unsafe_code                = "forbid"
 missing_docs               = "warn"
 missing_debug_implementations = "warn"
 unused_must_use            = "deny"
-rust_2024_compatibility    = "warn"
-rust_2018_idioms           = "warn"
+rust_2024_compatibility    = { level = "warn", priority = -1 }
+rust_2018_idioms           = { level = "warn", priority = -1 }
 unreachable_pub            = "warn"
 let_underscore_drop        = "warn"
 trivial_casts              = "warn"
@@ -148,6 +148,7 @@ missing_panics_doc      = "allow"
 must_use_candidate      = "allow"
 similar_names           = "allow"
 too_many_lines          = "allow"   # complexity caught by cognitive_complexity instead
+multiple_crate_versions = "allow"   # transitive duplicates from rust-crypto + dalek ecosystems; not load-bearing for safety
 
 # cognitive complexity gate (threshold lives in clippy.toml)
 cognitive_complexity    = "warn"

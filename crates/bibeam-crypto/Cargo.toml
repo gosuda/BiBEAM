@@ -5,7 +5,9 @@ edition      = { workspace = true }
 rust-version = { workspace = true }
 license      = { workspace = true }
 repository   = { workspace = true }
-description  = "Noise IK + AEAD + PASETO + key mgmt for BiBEAM."
+keywords     = { workspace = true }
+categories   = { workspace = true }
+description  = "Noise IK, AEAD, PASETO, and key management."
 
 [dependencies]
 bibeam-core      = { workspace = true }
@@ -24,3 +26,6 @@ thiserror        = { workspace = true }
 
 [lints]
 workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["bibeam-core", "snow", "x25519-dalek", "ed25519-dalek", "chacha20poly1305", "blake3", "hkdf", "rand", "rand_core", "zeroize", "subtle", "pasetors", "thiserror"]

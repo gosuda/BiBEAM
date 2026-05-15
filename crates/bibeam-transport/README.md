@@ -1,3 +1,3 @@
 # bibeam-transport
 
-QUIC + Noise datagram tunnel + STUN/hole-punch for BiBEAM.
+QUIC and Noise datagram tunnel with STUN hole-punching.

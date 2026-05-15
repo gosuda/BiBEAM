@@ -1,3 +1,3 @@
 # bibeam-coordinator
 
-BiBEAM rendezvous + matchmaker (axum + redb).
+Rendezvous and matchmaker daemon (axum + redb).

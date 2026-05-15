@@ -5,6 +5,6 @@
 mod tests {
     #[test]
     fn smoke() {
-        assert!(true, "crate compiles and tests run");
+        // Stub crate. Real tests will land alongside real code.
     }
 }

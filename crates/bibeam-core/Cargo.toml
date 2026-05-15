@@ -5,7 +5,9 @@ edition      = { workspace = true }
 rust-version = { workspace = true }
 license      = { workspace = true }
 repository   = { workspace = true }
-description  = "Shared types, errors, identity primitives for BiBEAM."
+keywords     = { workspace = true }
+categories   = { workspace = true }
+description  = "Shared types, errors, and identity primitives."
 
 [dependencies]
 serde      = { workspace = true }
@@ -16,3 +18,6 @@ bytes      = { workspace = true }
 
 [lints]
 workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["serde", "thiserror", "ulid", "time", "bytes"]

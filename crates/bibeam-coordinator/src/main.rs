@@ -15,10 +15,12 @@ struct Cli {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let _cli = Cli::parse();
-    tracing_subscriber::fmt().with_env_filter(
-        tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-    ).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "bootstrap");
     Ok(())
 }

@@ -1,3 +1,3 @@
 # bibeam-discovery
 
-Coordinator client + rendezvous types for BiBEAM.
+Coordinator client and rendezvous types.

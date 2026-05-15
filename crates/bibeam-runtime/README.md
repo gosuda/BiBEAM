@@ -1,3 +1,3 @@
 # bibeam-runtime
 
-Shared runtime: tracing, metrics, config, signals, health for BiBEAM.
+Shared runtime primitives: tracing, metrics, config, signals, health.

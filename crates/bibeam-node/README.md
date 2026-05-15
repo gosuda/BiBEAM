@@ -1,3 +1,3 @@
 # bibeam-node
 
-BiBEAM dual-role relay/exit daemon.
+Dual-role relay and exit daemon.

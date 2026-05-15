@@ -1,0 +1,19 @@
+from_latest_tag      = true
+ignore_merge_commits = true
+disable_changelog    = false
+disable_bump_commit  = false
+generate_mono_repository_global_tag = true
+branch_whitelist     = ["main", "release/**"]
+tag_prefix           = "v"
+
+[changelog]
+path        = "CHANGELOG.md"
+template    = "remote"
+remote      = "github.com"
+repository  = "BiBEAM"
+owner       = "gosuda"
+authors     = []
+
+[commit_types]
+hotfix = { changelog_title = "Hot Fixes" }
+release = { changelog_title = "Releases" }

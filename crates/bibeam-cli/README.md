@@ -1,3 +1,3 @@
 # bibeam-cli
 
-BiBEAM end-user client daemon + CLI.
+End-user client daemon and CLI.

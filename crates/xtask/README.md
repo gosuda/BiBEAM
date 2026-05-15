@@ -1,3 +1,3 @@
 # xtask
 
-Workspace ops runner for BiBEAM (CI, docs, release helpers).
+Workspace ops runner (CI, docs, release helpers).
