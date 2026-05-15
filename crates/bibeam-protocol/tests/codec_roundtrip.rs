@@ -11,8 +11,8 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use bibeam_protocol::{
-    ControlMessage, Disconnect, Frame, Heartbeat, MatchRequest, MatchResponse, Register,
-    RegisterAck, Tunnel, decode, encode,
+    CohortAdmit, CohortLive, CohortMessage, CohortRotate, ControlMessage, Disconnect, Frame,
+    Heartbeat, MatchRequest, MatchResponse, Register, RegisterAck, Tunnel, decode, encode,
 };
 use bytes::Bytes;
 use proptest::collection::vec;
@@ -106,6 +106,40 @@ fn arb_tunnel() -> impl Strategy<Value = Tunnel> {
     (arb_peer_id(), arb_bytes()).prop_map(|(peer_id, payload)| Tunnel { peer_id, payload })
 }
 
+fn arb_cohort_admit() -> impl Strategy<Value = CohortAdmit> {
+    (arb_cohort_id(), arb_peer_id(), arb_timestamp()).prop_map(|(cohort, member, at)| CohortAdmit {
+        cohort,
+        member,
+        at,
+    })
+}
+
+fn arb_cohort_live() -> impl Strategy<Value = CohortLive> {
+    (
+        arb_cohort_id(),
+        vec(arb_peer_id(), 0..8),
+        vec(arb_node_id(), 0..8),
+        arb_timestamp(),
+    )
+        .prop_map(|(cohort, members, exits, at)| CohortLive { cohort, members, exits, at })
+}
+
+fn arb_cohort_rotate() -> impl Strategy<Value = CohortRotate> {
+    (arb_cohort_id(), arb_cohort_id(), arb_timestamp()).prop_map(|(old, new, at)| CohortRotate {
+        old,
+        new,
+        at,
+    })
+}
+
+fn arb_cohort_message() -> impl Strategy<Value = CohortMessage> {
+    prop_oneof![
+        arb_cohort_admit().prop_map(CohortMessage::Admit),
+        arb_cohort_live().prop_map(CohortMessage::Live),
+        arb_cohort_rotate().prop_map(CohortMessage::Rotate),
+    ]
+}
+
 fn arb_control_message() -> impl Strategy<Value = ControlMessage> {
     prop_oneof![
         arb_register().prop_map(ControlMessage::Register),
@@ -125,7 +159,7 @@ fn arb_frame() -> impl Strategy<Value = Frame> {
     prop_oneof![
         arb_control_message().prop_map(Frame::Control),
         arb_tunnel().prop_map(Frame::Tunnel),
-        Just(Frame::Cohort),
+        arb_cohort_message().prop_map(Frame::Cohort),
     ]
 }
 

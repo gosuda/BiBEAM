@@ -7,20 +7,20 @@
 //! receiver reject mismatched protocol families before reaching for a
 //! serde-aware decoder.
 //!
-//! The three [`Frame`] variants stage payloads incrementally as the
-//! protocol stack lands:
+//! The three [`Frame`] variants now each carry their concrete payload:
 //!
 //! - [`Frame::Control`] carries the discovery / coordinator control
 //!   messages added in F-PROTO.3,
 //! - [`Frame::Tunnel`] carries the Noise-sealed IP datagram added in
 //!   F-PROTO.4, and
-//! - [`Frame::Cohort`] will carry the cohort lifecycle messages introduced
-//!   in F-PROTO.5.
+//! - [`Frame::Cohort`] carries the cohort lifecycle messages added in
+//!   F-PROTO.5.
 //!
 //! Codec helpers live in [`crate::codec`]; this module is wire-shape only.
 
 use serde::{Deserialize, Serialize};
 
+use crate::cohort::CohortMessage;
 use crate::control::ControlMessage;
 use crate::tunnel::Tunnel;
 
@@ -40,16 +40,16 @@ pub const VERSION: u8 = 1;
 
 /// Top-level wire frame.
 ///
-/// Concrete payloads land in later sub-items of F-PROTO. The
-/// [`Frame::Control`] variant carries a [`ControlMessage`] (F-PROTO.3),
-/// [`Frame::Tunnel`] carries a [`Tunnel`] datagram (F-PROTO.4), and
-/// [`Frame::Cohort`] is still a unit placeholder awaiting F-PROTO.5.
+/// Each variant carries the payload introduced by its matching F-PROTO
+/// sub-item: [`Frame::Control`] holds a [`ControlMessage`] (F-PROTO.3),
+/// [`Frame::Tunnel`] holds a [`Tunnel`] datagram (F-PROTO.4), and
+/// [`Frame::Cohort`] holds a [`CohortMessage`] (F-PROTO.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Frame {
     /// Control-plane traffic carrying one [`ControlMessage`].
     Control(ControlMessage),
     /// Data-plane traffic carrying one [`Tunnel`] datagram.
     Tunnel(Tunnel),
-    /// Cohort lifecycle traffic. Concrete payload lands in F-PROTO.5.
-    Cohort,
+    /// Cohort-plane traffic carrying one [`CohortMessage`].
+    Cohort(CohortMessage),
 }
