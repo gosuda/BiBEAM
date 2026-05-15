@@ -15,6 +15,7 @@ tokio-util = { workspace = true }
 tun-rs = { workspace = true }
 etherparse = { workspace = true }
 bytes = { workspace = true }
+dashmap = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
@@ -29,6 +30,7 @@ ignored = [
     "tun-rs",
     "etherparse",
     "bytes",
+    "dashmap",
     "thiserror",
     "tracing",
 ]
