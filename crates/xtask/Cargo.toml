@@ -2,7 +2,6 @@
 name         = "xtask"
 version      = "0.0.1"
 edition      = { workspace = true }
-rust-version = { workspace = true }
 license      = { workspace = true }
 publish      = false
 description  = "Workspace ops runner (CI, docs, release helpers)."
