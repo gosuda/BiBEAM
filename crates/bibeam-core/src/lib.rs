@@ -3,9 +3,11 @@
 
 pub mod error;
 pub mod ids;
+pub mod time;
 
 pub use error::Error;
 pub use ids::{CohortId, NodeId, PeerId};
+pub use time::Timestamp;
 
 /// Convenience alias over [`std::result::Result`] using the crate's [`Error`].
 ///
