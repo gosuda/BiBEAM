@@ -6,11 +6,7 @@ use clap::Parser;
 
 #[derive(Debug, Parser)]
 #[command(name = env!("CARGO_PKG_NAME"), version, about)]
-struct Cli {
-    /// Path to config file
-    #[arg(long, env = "BIBEAM_CONFIG")]
-    config: Option<std::path::PathBuf>,
-}
+struct Cli {}
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
