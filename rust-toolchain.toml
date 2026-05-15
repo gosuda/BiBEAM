@@ -1,0 +1,28 @@
+# DELIBERATELY NON-REPRODUCIBLE TOOLCHAIN.
+# Project policy (per project owner): always build on the latest Rust stable release.
+# Trade-off accepted: `rustup update` may advance the active toolchain between
+# `cargo build` invocations. We trade build-time reproducibility for free upstream
+# bugfixes / perf wins on the daily-driven toolchain.
+#
+# What IS reproducible:
+#   - MSRV floor: declared in workspace.package.rust-version = "1.89" (§4.2; driven by redb 3.x)
+#     and enforced by a dedicated CI job (§4.14 `msrv`) that always runs `cargo +1.89 check`.
+#   - Dependency graph: pinned by Cargo.lock (committed at repo root) — so the same
+#     `cargo build` on the same Rust release always resolves identical crate versions.
+#
+# What is NOT reproducible by design:
+#   - The exact Rust compiler version. If you need a deterministic build (release
+#     artifact, security audit, reproducible binary), the CI release job (Phase 2)
+#     overrides this with an explicit `dtolnay/rust-toolchain@<version>` pin.
+
+[toolchain]
+channel    = "stable"   # latest stable; rustup resolves on `rustup update`
+components = ["rustfmt", "clippy", "rust-analyzer", "rust-src", "llvm-tools-preview"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+profile = "minimal"

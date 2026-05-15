@@ -1,0 +1,213 @@
+[workspace]
+resolver = "3"
+members  = [
+  "crates/bibeam-core",
+  "crates/bibeam-protocol",
+  "crates/bibeam-crypto",
+  "crates/bibeam-transport",
+  "crates/bibeam-tun",
+  "crates/bibeam-discovery",
+  "crates/bibeam-runtime",
+  "crates/bibeam-coordinator",
+  "crates/bibeam-node",
+  "crates/bibeam-cli",
+]
+default-members = ["crates/bibeam-cli"]
+
+[workspace.package]
+version       = "0.0.1"
+edition       = "2024"
+rust-version  = "1.89"
+license       = "MIT"
+repository    = "https://github.com/gosuda/BiBEAM"
+homepage      = "https://github.com/gosuda/BiBEAM"
+authors       = ["GoSuda BiBEAM contributors"]
+readme        = "README.md"
+keywords      = ["vpn", "p2p", "quic", "noise", "privacy"]
+categories    = ["network-programming", "cryptography"]
+
+[workspace.dependencies]
+# --- shared first-party crates (path deps) ---
+bibeam-core       = { version = "0.0.1", path = "crates/bibeam-core" }
+bibeam-protocol   = { version = "0.0.1", path = "crates/bibeam-protocol" }
+bibeam-crypto     = { version = "0.0.1", path = "crates/bibeam-crypto" }
+bibeam-transport  = { version = "0.0.1", path = "crates/bibeam-transport" }
+bibeam-tun        = { version = "0.0.1", path = "crates/bibeam-tun" }
+bibeam-discovery  = { version = "0.0.1", path = "crates/bibeam-discovery" }
+bibeam-runtime    = { version = "0.0.1", path = "crates/bibeam-runtime" }
+
+# --- async runtime ---
+tokio        = { version = "1.40", features = ["rt-multi-thread", "macros", "net", "sync", "time", "io-util", "signal", "process", "fs"] }
+tokio-util   = { version = "0.7",  features = ["codec", "io", "rt"] }
+tokio-stream = { version = "0.1",  features = ["sync", "time"] }
+futures      = "0.3"
+futures-util = "0.3"
+
+# --- transport / crypto / proto ---
+quinn               = { version = "0.11", default-features = false, features = ["rustls-ring", "runtime-tokio"] }
+quinn-proto         = "0.11"
+rustls              = { version = "0.23", default-features = false, features = ["std", "ring"] }
+tokio-rustls        = "0.26"
+rustls-pemfile      = "2"
+snow                = { version = "0.9", features = ["ring-accelerated"] }
+x25519-dalek        = { version = "2",   features = ["serde", "static_secrets"] }
+ed25519-dalek       = { version = "2",   features = ["serde", "rand_core"] }
+chacha20poly1305    = "0.10"
+blake3              = { version = "1",   features = ["traits-preview"] }
+hkdf                = "0.12"
+rand                = "0.9"
+rand_core           = "0.9"
+zeroize             = { version = "1",   features = ["derive"] }
+subtle              = "2"
+pasetors            = { version = "0.7", features = ["v4"] }
+
+# --- TUN / packets / NAT ---
+tun-rs       = { version = "2",  features = ["async_tokio"] }
+etherparse   = "0.16"
+hickory-resolver = { version = "0.24", default-features = false, features = ["tokio-runtime", "system-config"] }
+
+# --- HTTP / WS ---
+axum                 = { version = "0.8", features = ["macros", "ws", "json", "tokio"] }
+tower                = "0.5"
+tower-http           = { version = "0.6", features = ["trace", "cors", "compression-gzip", "limit", "timeout"] }
+hyper                = "1"
+reqwest              = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+tokio-tungstenite    = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+fast-socks5          = "0.10"
+
+# --- storage / config / ids ---
+redb         = "3"
+figment      = { version = "0.10", features = ["toml", "env"] }
+clap         = { version = "4.5", features = ["derive", "env", "wrap_help"] }
+ulid         = { version = "1",   features = ["serde"] }
+uuid         = { version = "1",   features = ["v7", "serde"] }
+time         = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
+
+# --- serde / data ---
+serde         = { version = "1", features = ["derive"] }
+serde_json    = "1"
+serde_with    = { version = "3", features = ["base64", "hex"] }
+postcard      = { version = "1", features = ["alloc", "use-std"] }
+bytes         = "1"
+toml          = "0.8"
+base64        = "0.22"
+hex           = "0.4"
+
+# --- error / logging / metrics ---
+thiserror                      = "2"
+anyhow                         = "1"
+tracing                        = "0.1"
+tracing-subscriber             = { version = "0.3", features = ["env-filter", "json", "fmt", "registry"] }
+tracing-error                  = "0.2"
+metrics                        = "0.23"
+metrics-exporter-prometheus    = { version = "0.15", default-features = false, features = ["http-listener"] }
+
+# --- rate limit / ops ---
+governor   = "0.7"
+parking_lot = "0.12"
+dashmap    = "6"
+async-trait = "0.1"
+
+# --- test / bench / fuzz ---
+proptest        = "1"
+proptest-derive = "0.5"
+criterion       = { version = "0.5", features = ["html_reports"] }
+arbitrary       = { version = "1", features = ["derive"] }
+
+# --- allocator (server-side) ---
+mimalloc = { version = "0.1", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code                = "forbid"
+missing_docs               = "warn"
+missing_debug_implementations = "warn"
+unused_must_use            = "deny"
+rust_2024_compatibility    = "warn"
+rust_2018_idioms           = "warn"
+unreachable_pub            = "warn"
+let_underscore_drop        = "warn"
+trivial_casts              = "warn"
+trivial_numeric_casts      = "warn"
+unused_import_braces       = "warn"
+unused_lifetimes           = "warn"
+unused_qualifications      = "warn"
+single_use_lifetimes       = "warn"
+non_ascii_idents           = "deny"
+
+[workspace.lints.clippy]
+# group-level warns (CI escalates with -D warnings)
+pedantic = { level = "warn", priority = -1 }
+nursery  = { level = "warn", priority = -1 }
+cargo    = { level = "warn", priority = -1 }
+
+# pedantic carve-outs (too noisy / not load-bearing for our domain)
+module_name_repetitions = "allow"
+missing_errors_doc      = "allow"
+missing_panics_doc      = "allow"
+must_use_candidate      = "allow"
+similar_names           = "allow"
+too_many_lines          = "allow"   # complexity caught by cognitive_complexity instead
+
+# cognitive complexity gate (threshold lives in clippy.toml)
+cognitive_complexity    = "warn"
+
+# surgical restriction denies (safety-load-bearing only)
+panic                    = "deny"
+unwrap_used              = "deny"
+expect_used              = "deny"
+todo                     = "deny"
+unimplemented            = "deny"
+unreachable              = "deny"
+dbg_macro                = "deny"
+print_stdout             = "deny"
+print_stderr             = "deny"
+mem_forget               = "deny"
+unwrap_in_result         = "deny"
+let_underscore_must_use  = "deny"
+exit                     = "deny"
+get_unwrap               = "deny"
+lossy_float_literal      = "deny"
+rc_buffer                = "deny"
+rc_mutex                 = "deny"
+self_named_module_files  = "warn"
+verbose_file_reads       = "warn"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links     = "deny"
+private_intra_doc_links    = "warn"
+missing_crate_level_docs   = "warn"
+unescaped_backticks        = "warn"
+invalid_html_tags          = "deny"
+bare_urls                  = "warn"
+
+[profile.release]
+lto              = "fat"
+codegen-units    = 1
+panic            = "abort"
+strip            = "symbols"
+opt-level        = 3
+debug            = false
+overflow-checks  = false
+incremental      = false
+
+[profile.release-debug]
+inherits = "release"
+strip    = "none"
+debug    = "full"
+
+[profile.dev]
+opt-level         = 0
+debug             = "limited"
+split-debuginfo   = "unpacked"
+incremental       = true
+overflow-checks   = true
+
+[profile.bench]
+inherits      = "release"
+lto           = "thin"
+codegen-units = 16
+debug         = "line-tables-only"
+
+[profile.test]
+opt-level = 1
+debug     = "limited"

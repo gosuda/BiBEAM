@@ -1,0 +1,18 @@
+[package]
+name         = "bibeam-protocol"
+version      = { workspace = true }
+edition      = { workspace = true }
+rust-version = { workspace = true }
+license      = { workspace = true }
+repository   = { workspace = true }
+description  = "Wire frames + postcard codec for BiBEAM."
+
+[dependencies]
+bibeam-core = { workspace = true }
+serde       = { workspace = true }
+postcard    = { workspace = true }
+thiserror   = { workspace = true }
+bytes       = { workspace = true }
+
+[lints]
+workspace = true

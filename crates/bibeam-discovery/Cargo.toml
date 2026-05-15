@@ -1,0 +1,23 @@
+[package]
+name         = "bibeam-discovery"
+version      = { workspace = true }
+edition      = { workspace = true }
+rust-version = { workspace = true }
+license      = { workspace = true }
+repository   = { workspace = true }
+description  = "Coordinator client + rendezvous types for BiBEAM."
+
+[dependencies]
+bibeam-core     = { workspace = true }
+bibeam-protocol = { workspace = true }
+bibeam-crypto   = { workspace = true }
+tokio           = { workspace = true }
+reqwest         = { workspace = true }
+tokio-tungstenite = { workspace = true }
+serde           = { workspace = true }
+serde_json      = { workspace = true }
+thiserror       = { workspace = true }
+tracing         = { workspace = true }
+
+[lints]
+workspace = true

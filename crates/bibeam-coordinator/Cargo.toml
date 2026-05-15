@@ -1,0 +1,38 @@
+[package]
+name         = "bibeam-coordinator"
+version      = { workspace = true }
+edition      = { workspace = true }
+rust-version = { workspace = true }
+license      = { workspace = true }
+repository   = { workspace = true }
+description  = "BiBEAM rendezvous + matchmaker (axum + redb)."
+
+[[bin]]
+name = "bibeam-coordinator"
+path = "src/main.rs"
+
+[dependencies]
+bibeam-core      = { workspace = true }
+bibeam-protocol  = { workspace = true }
+bibeam-crypto    = { workspace = true }
+bibeam-discovery = { workspace = true }
+bibeam-runtime   = { workspace = true }
+tokio            = { workspace = true }
+axum             = { workspace = true }
+tower            = { workspace = true }
+tower-http       = { workspace = true }
+redb             = { workspace = true }
+serde            = { workspace = true }
+serde_json       = { workspace = true }
+governor         = { workspace = true }
+parking_lot      = { workspace = true }
+dashmap          = { workspace = true }
+clap             = { workspace = true }
+tracing          = { workspace = true }
+tracing-subscriber = { workspace = true }   # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
+thiserror        = { workspace = true }
+anyhow           = { workspace = true }
+mimalloc         = { workspace = true }
+
+[lints]
+workspace = true

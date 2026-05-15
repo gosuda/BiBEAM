@@ -1,0 +1,18 @@
+[package]
+name         = "bibeam-core"
+version      = { workspace = true }
+edition      = { workspace = true }
+rust-version = { workspace = true }
+license      = { workspace = true }
+repository   = { workspace = true }
+description  = "Shared types, errors, identity primitives for BiBEAM."
+
+[dependencies]
+serde      = { workspace = true }
+thiserror  = { workspace = true }
+ulid       = { workspace = true }
+time       = { workspace = true }
+bytes      = { workspace = true }
+
+[lints]
+workspace = true
