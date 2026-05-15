@@ -2,11 +2,13 @@
 #![doc = include_str!("../README.md")]
 
 pub mod error;
+pub mod identity;
 pub mod ids;
 pub mod redaction;
 pub mod time;
 
 pub use error::Error;
+pub use identity::Fingerprint;
 pub use ids::{CohortId, NodeId, PeerId};
 pub use redaction::{RedactionKey, redact_ip, redact_peer_id};
 pub use time::Timestamp;

@@ -352,6 +352,7 @@ dependencies = [
  "blake3",
  "bytes",
  "serde",
+ "subtle",
  "thiserror 2.0.18",
  "time",
  "ulid",
