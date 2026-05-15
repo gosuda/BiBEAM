@@ -49,34 +49,34 @@ quinn-proto         = "0.11"
 rustls              = { version = "0.23", default-features = false, features = ["std", "ring"] }
 tokio-rustls        = "0.26"
 rustls-pemfile      = "2"
-snow                = { version = "0.9", features = ["ring-accelerated"] }
+snow                = { version = "0.10", features = ["ring-accelerated"] }
 x25519-dalek        = { version = "2",   features = ["serde", "static_secrets"] }
 ed25519-dalek       = { version = "2",   features = ["serde", "rand_core"] }
 chacha20poly1305    = "0.10"
 blake3              = { version = "1",   features = ["traits-preview"] }
-hkdf                = "0.12"
-rand                = "0.9"
-rand_core           = "0.9"
+hkdf                = "0.13"
+rand                = "0.10"
+rand_core           = "0.10"
 zeroize             = { version = "1",   features = ["derive"] }
 subtle              = "2"
 pasetors            = { version = "0.7", features = ["v4"] }
 
 # --- TUN / packets / NAT ---
 tun-rs       = { version = "2",  features = ["async_tokio"] }
-etherparse   = "0.16"
-hickory-resolver = { version = "0.24", default-features = false, features = ["tokio-runtime", "system-config"] }
+etherparse   = "0.20"
+hickory-resolver = { version = "0.26", default-features = false, features = ["tokio", "system-config"] }
 
 # --- HTTP / WS ---
 axum                 = { version = "0.8", features = ["macros", "ws", "json", "tokio"] }
 tower                = "0.5"
 tower-http           = { version = "0.6", features = ["trace", "cors", "compression-gzip", "limit", "timeout"] }
 hyper                = "1"
-reqwest              = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
-tokio-tungstenite    = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
-fast-socks5          = "0.10"
+reqwest              = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
+tokio-tungstenite    = { version = "0.29", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+fast-socks5          = "1.0"
 
 # --- storage / config / ids ---
-redb         = "3"
+redb         = "4"
 figment      = { version = "0.10", features = ["toml", "env"] }
 clap         = { version = "4.5", features = ["derive", "env", "wrap_help"] }
 ulid         = { version = "1",   features = ["serde"] }
@@ -89,7 +89,7 @@ serde_json    = "1"
 serde_with    = { version = "3", features = ["base64", "hex"] }
 postcard      = { version = "1", features = ["alloc", "use-std"] }
 bytes         = "1"
-toml          = "0.8"
+toml          = "1.1"
 base64        = "0.22"
 hex           = "0.4"
 
@@ -99,11 +99,11 @@ anyhow                         = "1"
 tracing                        = "0.1"
 tracing-subscriber             = { version = "0.3", features = ["env-filter", "json", "fmt", "registry"] }
 tracing-error                  = "0.2"
-metrics                        = "0.23"
-metrics-exporter-prometheus    = { version = "0.15", default-features = false, features = ["http-listener"] }
+metrics                        = "0.24"
+metrics-exporter-prometheus    = { version = "0.18", default-features = false, features = ["http-listener"] }
 
 # --- rate limit / ops ---
-governor   = "0.7"
+governor   = "0.10"
 parking_lot = "0.12"
 dashmap    = "6"
 async-trait = "0.1"
