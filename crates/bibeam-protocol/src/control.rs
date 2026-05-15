@@ -48,9 +48,9 @@ pub struct Register {
 /// Coordinator's acknowledgement of a successful [`Register`].
 ///
 /// `session_token` is a PASETO v4 token issued by the coordinator (see
-/// F-CRYPTO.4). Its claim set is the shape declared in `SessionClaims`
-/// (introduced in F-PROTO.6). `expires_at` is duplicated here so peers
-/// do not have to parse the token to find out when to renew.
+/// F-CRYPTO.4). Its claim set is the shape declared in
+/// [`crate::claims::SessionClaims`]. `expires_at` is duplicated here so
+/// peers do not have to parse the token to find out when to renew.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RegisterAck {
     /// PASETO v4 session token issued by the coordinator.
