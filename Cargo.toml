@@ -11,6 +11,7 @@ members  = [
   "crates/bibeam-coordinator",
   "crates/bibeam-node",
   "crates/bibeam-cli",
+  "crates/xtask",
 ]
 default-members = ["crates/bibeam-cli"]
 
