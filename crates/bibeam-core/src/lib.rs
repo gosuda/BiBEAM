@@ -3,10 +3,12 @@
 
 pub mod error;
 pub mod ids;
+pub mod redaction;
 pub mod time;
 
 pub use error::Error;
 pub use ids::{CohortId, NodeId, PeerId};
+pub use redaction::{RedactionKey, redact_ip, redact_peer_id};
 pub use time::Timestamp;
 
 /// Convenience alias over [`std::result::Result`] using the crate's [`Error`].

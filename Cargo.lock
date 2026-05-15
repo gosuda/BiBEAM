@@ -349,11 +349,13 @@ dependencies = [
 name = "bibeam-core"
 version = "0.0.1"
 dependencies = [
+ "blake3",
  "bytes",
  "serde",
  "thiserror 2.0.18",
  "time",
  "ulid",
+ "zeroize",
 ]
 
 [[package]]

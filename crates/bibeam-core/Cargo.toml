@@ -9,14 +9,16 @@ categories = { workspace = true }
 description = "Shared types, errors, and identity primitives."
 
 [dependencies]
+blake3 = { workspace = true }
+bytes = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-ulid = { workspace = true }
 time = { workspace = true }
-bytes = { workspace = true }
+ulid = { workspace = true }
+zeroize = { workspace = true }
 
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["serde", "thiserror", "ulid", "time", "bytes"]
+ignored = ["blake3", "bytes", "serde", "thiserror", "time", "ulid", "zeroize"]
