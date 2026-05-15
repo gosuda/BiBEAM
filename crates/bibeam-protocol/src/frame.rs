@@ -17,8 +17,7 @@
 //! - [`Frame::Cohort`] will carry the cohort lifecycle messages introduced
 //!   in F-PROTO.5.
 //!
-//! Codec helpers land alongside this module in F-PROTO.2; this module is
-//! wire-shape only.
+//! Codec helpers live in [`crate::codec`]; this module is wire-shape only.
 
 use serde::{Deserialize, Serialize};
 
