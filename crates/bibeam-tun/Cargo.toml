@@ -11,6 +11,7 @@ description = "Cross-platform TUN device wrapper and L3 packet pipeline."
 [dependencies]
 bibeam-core = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 tun-rs = { workspace = true }
 etherparse = { workspace = true }
 bytes = { workspace = true }
@@ -21,4 +22,13 @@ tracing = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "tokio", "tun-rs", "etherparse", "bytes", "thiserror", "tracing"]
+ignored = [
+    "bibeam-core",
+    "tokio",
+    "tokio-util",
+    "tun-rs",
+    "etherparse",
+    "bytes",
+    "thiserror",
+    "tracing",
+]
