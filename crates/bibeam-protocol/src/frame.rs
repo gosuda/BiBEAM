@@ -7,11 +7,11 @@
 //! receiver reject mismatched protocol families before reaching for a
 //! serde-aware decoder.
 //!
-//! The three [`Frame`] variants are placeholders at this stage of the
-//! protocol stack:
+//! The three [`Frame`] variants stage payloads incrementally as the
+//! protocol stack lands:
 //!
-//! - [`Frame::Control`] will carry the discovery / coordinator control
-//!   messages introduced in F-PROTO.3,
+//! - [`Frame::Control`] carries the discovery / coordinator control
+//!   messages added in F-PROTO.3,
 //! - [`Frame::Tunnel`] will carry the Noise-sealed IP datagram introduced
 //!   in F-PROTO.4, and
 //! - [`Frame::Cohort`] will carry the cohort lifecycle messages introduced
@@ -20,6 +20,8 @@
 //! Codec helpers live in [`crate::codec`]; this module is wire-shape only.
 
 use serde::{Deserialize, Serialize};
+
+use crate::control::ControlMessage;
 
 /// Four-byte magic prefix written at the start of every `BiBEAM` frame.
 ///
@@ -37,13 +39,14 @@ pub const VERSION: u8 = 1;
 
 /// Top-level wire frame.
 ///
-/// Concrete payloads land in later sub-items of F-PROTO; for now each
-/// variant is a unit placeholder so the codec and the dispatch machinery
-/// can be wired up against a stable shape.
+/// Concrete payloads land in later sub-items of F-PROTO. The
+/// [`Frame::Control`] variant now carries a [`ControlMessage`]
+/// (F-PROTO.3); the remaining variants are still unit placeholders
+/// awaiting their respective F-PROTO sub-items.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Frame {
-    /// Control-plane traffic. Concrete payload lands in F-PROTO.3.
-    Control,
+    /// Control-plane traffic carrying one [`ControlMessage`].
+    Control(ControlMessage),
     /// Data-plane tunnel datagram. Concrete payload lands in F-PROTO.4.
     Tunnel,
     /// Cohort lifecycle traffic. Concrete payload lands in F-PROTO.5.

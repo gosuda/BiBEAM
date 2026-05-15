@@ -13,10 +13,12 @@ bibeam-core = { workspace = true }
 serde = { workspace = true }
 postcard = { workspace = true }
 thiserror = { workspace = true }
-bytes = { workspace = true }
+bytes = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
 proptest = { workspace = true }
+time = { workspace = true }
+ulid = { workspace = true }
 
 [lints]
 workspace = true
