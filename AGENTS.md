@@ -64,3 +64,4 @@ See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map,
 - A new hook failure: [`.pre-commit-config.yaml`](./.pre-commit-config.yaml).
 - A CI failure that does not reproduce locally: the [GitHub workflow](./.github/workflows/ci.yml) runs three operating systems; macOS and Windows runners catch path and line-ending issues.
 - A "where does this fit?" question: [`docs/architecture.md`](./docs/architecture.md).
+- A "why does the scaffold look like this?" question: [`docs/plan/init.md`](./docs/plan/init.md) — the spec that drove Phase 1.

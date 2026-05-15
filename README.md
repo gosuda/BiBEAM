@@ -59,6 +59,7 @@ Per-crate `README.md` files are **generated** by `cargo run -p xtask -- gen-read
 4. [`docs/operator-runbook.md`](./docs/operator-runbook.md) — bringing up a coordinator or node.
 5. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — strict regime, dep-selection rubric, commit conventions.
 6. [`AGENTS.md`](./AGENTS.md) — brief for AI coding assistants.
+7. [`docs/plan/init.md`](./docs/plan/init.md) — the spec that drove the Phase-1 init scaffold (as-built rationale).
 
 ## License
 
