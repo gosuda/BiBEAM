@@ -18,5 +18,14 @@ async fn main() -> Result<()> {
         )
         .init();
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "bootstrap");
+    // The library crate exposes the route surface (F-COORD.1); a
+    // follow-up sub-item wires the listener + redb + ReadyLatch flip
+    // into this bin's startup sequence (F-COORD.11). Until then,
+    // `main` only constructs the router to prove the bin links
+    // against the library, then exits cleanly.
+    let _router = bibeam_coordinator::server::build_router(
+        bibeam_runtime::ReadyLatch::new(),
+        axum::Router::new(),
+    );
     Ok(())
 }
