@@ -43,6 +43,7 @@ ed25519-dalek = { version = "2", features = ["serde", "rand_core"] }
 chacha20poly1305 = "0.10"
 blake3 = { version = "1", features = ["traits-preview"] }
 hkdf = "0.13"
+sha2 = "0.11"
 rand = "0.10"
 rand_core = "0.10"
 zeroize = { version = "1", features = ["derive"] }
