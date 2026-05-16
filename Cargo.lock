@@ -364,6 +364,7 @@ dependencies = [
  "bibeam-crypto",
  "bibeam-protocol",
  "futures-util",
+ "parking_lot",
  "reqwest",
  "rustls",
  "serde",
