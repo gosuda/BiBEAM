@@ -28,8 +28,17 @@ tracing-subscriber = { workspace = true } # required by the shared bin main.rs s
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+# Linux-only capability inspection. The `caps` crate ships no
+# macOS / Windows targets, so `setup_tun()`'s privilege guard
+# pulls it in only when the build target is Linux. The matching
+# code is also `#[cfg(target_os = "linux")]`-gated.
+[target.'cfg(target_os = "linux")'.dependencies]
+caps = { workspace = true }
+
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "figment", "thiserror"]
+# `caps` is a target-gated dependency that machete cannot detect from cfg-blocked Rust;
+# list it explicitly so the workspace `cargo machete` gate stays green on every host OS.
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "figment", "thiserror", "caps"]

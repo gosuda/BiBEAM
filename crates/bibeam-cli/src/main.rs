@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 mod cli;
+mod tun_setup;
 
 use anyhow::Result;
 use clap::Parser as _;

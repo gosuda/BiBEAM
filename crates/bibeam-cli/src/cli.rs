@@ -128,13 +128,12 @@ async fn handle_init(config_override: Option<&std::path::Path>) -> Result<()> {
     Ok(())
 }
 
-/// `up` — placeholder; the bootstrap, TUN setup, rotation, and
-/// SOCKS5-fallback paths arrive in F-CLI.2 through F-CLI.8.
-#[allow(
-    clippy::unused_async,
-    reason = "async-shaped to keep the dispatch table uniform; later F-CLI sub-items add \
-              real .await work to the body."
-)]
+/// `up` — partial; F-CLI.2 wires the privilege-guarded TUN
+/// setup. Bootstrap (F-CLI.3+) and the SOCKS5 fallback
+/// (F-CLI.8) arrive in later sub-items; for now the handler
+/// delegates to [`probe_tun_or_fallback`] so the cognitive
+/// score of the cli-side dispatch stays compact as later
+/// sub-items extend it.
 async fn handle_up(
     config_override: Option<&std::path::Path>,
     invite: Option<String>,
@@ -144,9 +143,63 @@ async fn handle_up(
         config_override = ?config_override,
         has_invite = invite.is_some(),
         daemonise,
-        "up: scaffold subcommand — bootstrap lands in F-CLI.3+",
+        "up: invoking TUN setup probe (F-CLI.2)",
     );
-    Ok(())
+    probe_tun_or_fallback().await
+}
+
+/// Probe the TUN setup once and route the three outcomes:
+/// successful open, typed `NoPrivilege` (F-CLI.8's fallback
+/// signal), or any other TUN failure (surfaced as an error).
+///
+/// Returns `Ok(())` for both "TUN opened" and "no privilege —
+/// SOCKS5 fallback would take over". The SOCKS5 path lands in
+/// F-CLI.8; this commit gives the dispatch path something real
+/// to do beyond logging.
+async fn probe_tun_or_fallback() -> Result<()> {
+    let tun_config = crate::tun_setup::TunSetupConfig::default();
+    let outcome = crate::tun_setup::setup_tun(&tun_config).await;
+    classify_tun_outcome(&tun_config, outcome)
+}
+
+/// Route a [`crate::tun_setup::setup_tun`] outcome into the
+/// dispatch contract. Kept as a free fn so the cognitive
+/// complexity of [`probe_tun_or_fallback`] stays flat for
+/// later F-CLI sub-items.
+fn classify_tun_outcome(
+    tun_config: &crate::tun_setup::TunSetupConfig,
+    outcome: Result<bibeam_tun::TunDevice, crate::tun_setup::TunSetupError>,
+) -> Result<()> {
+    match outcome {
+        Ok(_device) => {
+            log_tun_opened(tun_config);
+            Ok(())
+        },
+        Err(crate::tun_setup::TunSetupError::NoPrivilege { platform, help }) => {
+            log_no_privilege(platform, help);
+            Ok(())
+        },
+        Err(other) => Err(anyhow::Error::new(other).context("up: TUN setup failed")),
+    }
+}
+
+/// Log the "TUN opened" branch. Free fn so
+/// [`classify_tun_outcome`]'s match arms each shrink to one
+/// expression — keeps the cognitive-complexity score under the
+/// 15-cap as F-CLI.3+ add more arms.
+fn log_tun_opened(tun_config: &crate::tun_setup::TunSetupConfig) {
+    tracing::info!(
+        interface = %tun_config.name,
+        mtu = tun_config.mtu,
+        "up: TUN device opened — bootstrap path lands in F-CLI.3+",
+    );
+}
+
+/// Log the "no privilege" branch the same way as
+/// [`log_tun_opened`]. F-CLI.8 will replace the body with the
+/// SOCKS5-fallback handoff.
+fn log_no_privilege(platform: &'static str, help: &'static str) {
+    tracing::warn!(platform, help, "up: TUN setup denied — SOCKS5 fallback lands in F-CLI.8",);
 }
 
 /// `down` — placeholder; the kill-via-PID-file path lands together

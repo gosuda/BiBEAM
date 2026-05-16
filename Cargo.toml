@@ -77,6 +77,13 @@ ulid = { version = "1", features = ["serde"] }
 uuid = { version = "1", features = ["v7", "serde"] }
 time = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
 
+# --- platform capabilities (Linux-only; consumers MUST gate via `target.'cfg(target_os = "linux")'.dependencies`) ---
+# `caps` is a Linux-only crate (no macOS / Windows targets). Pinning the version here
+# keeps Linux consumers in lock-step; the actual consumption site is
+# `crates/bibeam-cli/Cargo.toml`'s `[target.'cfg(target_os = "linux")'.dependencies]`
+# block — never an unconditional `[dependencies]` line in any member crate.
+caps = "0.5"
+
 # --- serde / data ---
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
