@@ -1,16 +1,21 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
-use anyhow::Result;
-use clap::Parser;
+mod cli;
+mod config;
+mod ech;
+mod exit_pick;
+mod register;
+mod rotation;
+mod socks5_fallback;
+mod tun_setup;
 
-#[derive(Debug, Parser)]
-#[command(name = env!("CARGO_PKG_NAME"), version, about)]
-struct Cli {}
+use anyhow::Result;
+use clap::Parser as _;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    let _cli = Cli::parse();
+    let parsed = cli::Cli::parse();
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -18,5 +23,5 @@ async fn main() -> Result<()> {
         )
         .init();
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "bootstrap");
-    Ok(())
+    cli::dispatch(parsed).await
 }

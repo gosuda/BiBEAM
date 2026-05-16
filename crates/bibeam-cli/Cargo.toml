@@ -27,9 +27,32 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true } # required by the shared bin main.rs subscriber init (§5 main.rs skeleton)
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+postcard = { workspace = true }           # invite wire form (matches bibeam-discovery::SignedInvite serde derives)
+base64 = { workspace = true }             # invite wire form is base64-postcard (operator-friendly copy/paste)
+rand = { workspace = true }               # fresh per-seal nonce for the on-disk session-token AEAD
+directories = { workspace = true }        # platform-standard config_dir resolution for state.key / state/session.bin
+blake3 = { workspace = true }             # 64-bit issuer-fingerprint preview in log lines
+tokio-util = { workspace = true }         # CancellationToken for the F-CLI.5 rotation loop
+serde = { workspace = true }              # typed config struct loaded via figment (F-CLI.6)
+toml = { workspace = true }               # `config` subcommand renders the resolved config as TOML for operator inspection (F-CLI.6)
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] } # virtual-time test fixtures for rotation_loop (start_paused)
+futures-util = { workspace = true }                    # BoxFuture in rotation-loop tests; FnMut(...) -> impl Future trait shape requires explicit boxing
+parking_lot = { workspace = true }                     # rotation-loop tests record causes through a parking_lot::Mutex (workspace policy forbids std::sync::Mutex)
+serde_json = { workspace = true }                      # serde_json round-trip assertions for the kebab-case ECH wire form
+
+# Linux-only capability inspection. The `caps` crate ships no
+# macOS / Windows targets, so `setup_tun()`'s privilege guard
+# pulls it in only when the build target is Linux. The matching
+# code is also `#[cfg(target_os = "linux")]`-gated.
+[target.'cfg(target_os = "linux")'.dependencies]
+caps = { workspace = true }
 
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "figment", "thiserror"]
+# `caps` is a target-gated dependency that machete cannot detect from cfg-blocked Rust;
+# list it explicitly so the workspace `cargo machete` gate stays green on every host OS.
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "figment", "thiserror", "caps"]
