@@ -398,6 +398,7 @@ dependencies = [
  "governor",
  "mimalloc",
  "parking_lot",
+ "pasetors",
  "postcard",
  "redb",
  "serde",
