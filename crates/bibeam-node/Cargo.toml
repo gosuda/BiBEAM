@@ -58,6 +58,8 @@ ipnet = { workspace = true }
 # --- R-MULTIHOP-NODE forwarder mode: per-pair routing table metrics + frame bytes ---
 metrics = { workspace = true }
 bytes = { workspace = true }
+# --- F-NODE.4 exit-mode: module-private `TunPacketSink` trait needs object-safe async fn (used via `Box<dyn …>`) ---
+async-trait = { workspace = true }
 
 [dev-dependencies]
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---

@@ -31,9 +31,16 @@
 //! coord control-plane rate limit at
 //! [`coordinator::rate_limit`], which keys on source IP +
 //! `PeerId` for the four HTTP control-plane verbs.
+//!
+//! The [`exit_mode`] sub-module implements the exit-side packet
+//! egress (F-NODE.4 per D-3 + D-1): an L3 path that writes decrypted
+//! IP packets to a kernel TUN device for operator-configured NAT
+//! egress, and an L4 SOCKS5 fallback for environments where a TUN
+//! device cannot be opened.
 
 pub mod coordinator;
 pub mod dns;
+pub mod exit_mode;
 pub mod forwarder;
 pub mod rate_limit;
 pub mod telemetry;
