@@ -12,6 +12,7 @@ ignore = [
   # native `expiration` field; this is the manual-review fallback.)
   { id = "RUSTSEC-2024-0436", reason = "Revisit by 2026-08-15. paste 1.0.15 unmaintained — transitive via clap-derive macro expansion. Not directly invoked at MVP; replacement upstream depends on a clap-derive release." },
   { id = "RUSTSEC-2023-0089", reason = "Revisit by 2026-08-15. atomic-polyfill 1.0.3 unmaintained — transitive via embassy-sync / similar low-level chains. Not directly invoked at MVP; revisit when upstream chains drop the dep." },
+  { id = "RUSTSEC-2025-0134", reason = "Revisit by 2026-11-15. rustls-pemfile 2.2.0 unmaintained — transitive dev-only via axum-server 0.7 (F-DISC.7 integration test). Replacement is rustls-pki-types' PemObject trait; revisit when axum-server cuts a release using it." },
 ]
 
 [licenses]

@@ -66,6 +66,8 @@ hyper = "1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
 tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 fast-socks5 = "1.0"
+url = { version = "2", features = ["serde"] }
+pkarr = { version = "6", default-features = false, features = ["dht"] }
 
 # --- storage / config / ids ---
 redb = "4"
@@ -105,6 +107,8 @@ proptest = "1"
 proptest-derive = "0.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 arbitrary = { version = "1", features = ["derive"] }
+rcgen = { version = "0.14", default-features = false, features = ["ring", "pem"] }
+axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
 
 # --- allocator (server-side) ---
 mimalloc = { version = "0.1", default-features = false }
