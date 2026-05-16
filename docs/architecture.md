@@ -47,12 +47,13 @@ When **every** configured coordinator is unreachable, clients fall back to pkarr
 ### Crates that ship the control plane
 
 - [`bibeam-discovery`](../crates/bibeam-discovery) — coordinator client, rendezvous types, DHT fallback.
-- [`bibeam-coordinator`](../crates/bibeam-coordinator) — the daemon itself (axum REST + WS, redb storage).
 - [`bibeam-crypto`](../crates/bibeam-crypto) — PASETO v4 token mint and verify.
+
+The control-plane daemon itself (axum REST + WS, redb storage) lives as the `coordinator/` module inside [`bibeam-node`](../crates/bibeam-node), mounted behind the `is_coordinator` config flag (per §11 R-1). A federated deployment runs 2–3 `bibeam-node` instances with `is_coordinator = true`; data-plane-only nodes leave the flag unset.
 
 ## Data plane
 
-The data plane speaks the WireGuard wire-protocol (Noise_IK_25519_ChaChaPoly_BLAKE2s over UDP, per the WireGuard whitepaper) via `boringtun`. NAT traversal is a control-plane responsibility: the coordinator orchestrates STUN-based endpoint discovery, and the discovered UDP endpoints are then used as WireGuard peer endpoints. `bibeam-coordinator` issues per-client WireGuard peer configurations scoped to the assigned cohort's exit — each client gets its own keypair and its own AllowedIPs / endpoint pair, with the *cohort* serving as the admission and rotation unit rather than the keying unit. The PASETO v4 session token still binds `{client_id, exit_id, expires_at, max_bytes}` at the coordinator level and gates issuance of those WG configs, but WireGuard itself does not carry the token on the wire.
+The data plane speaks the WireGuard wire-protocol (Noise_IK_25519_ChaChaPoly_BLAKE2s over UDP, per the WireGuard whitepaper) via `boringtun`. NAT traversal is a control-plane responsibility: the coordinator orchestrates STUN-based endpoint discovery, and the discovered UDP endpoints are then used as WireGuard peer endpoints. Coord-enabled `bibeam-node` instances pair client + exit registered WireGuard public keys, with the *cohort* serving as the admission and rotation unit rather than the keying unit (per §11 D-6 RESOLVED option (c) key custody — the coordinator never holds private keys; client and exit each generate their own X25519 WG keypairs at registration time and publish only public keys). The PASETO v4 session token still binds `{client_id, exit_id, expires_at, max_bytes}` at the coordinator level and gates the public-key pairing, but WireGuard itself does not carry the token on the wire.
 
 The shared exit pool follows Model D+: one bucket, K clients egress through M exits, each client assigned to a random exit per session. Rotation happens every 15 minutes or after 500 MB egress, whichever comes first. On rotation the client re-requests a token from the coordinator, which re-runs admission and mints a fresh WireGuard peer configuration.
 

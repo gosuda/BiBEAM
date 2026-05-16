@@ -10,7 +10,7 @@ Bibeam is an open source, collaborative, distributed, E2E, non-exhaustive Peer-T
 
 **Phase 1 init scaffold.** The workspace builds on the latest stable toolchain, the strict regime is wired (`#![forbid(unsafe_code)]`, strict clippy, conventional commits enforced by `cog verify`), and CI runs fmt + clippy + nextest matrix + doc + deny + machete + coverage on every PR.
 
-**No tunnel functionality has been implemented yet.** Crate skeletons declare boundaries; modules are empty. The three binaries currently print `bootstrap version=0.0.1` and exit on SIGINT. Protocol code lands in subsequent PRs.
+**No tunnel functionality has been implemented yet.** Crate skeletons declare boundaries; modules are empty. The two daemon binaries (`bibeam-node`, `bibeam-cli`) currently print `bootstrap version=0.0.1` and exit on SIGINT. Protocol code lands in subsequent PRs.
 
 ## Quickstart
 
@@ -27,7 +27,7 @@ just ci
 
 ## Workspace
 
-Seven libraries + three role-specific daemons + one ops runner. See [docs/architecture.md](./docs/architecture.md) for the crate boundary map and request flow.
+Seven libraries + two role-specific daemons + one ops runner. See [docs/architecture.md](./docs/architecture.md) for the crate boundary map and request flow.
 
 | Crate | Role |
 |---|---|
@@ -38,8 +38,7 @@ Seven libraries + three role-specific daemons + one ops runner. See [docs/archit
 | [`bibeam-tun`](./crates/bibeam-tun) | Cross-platform TUN device + L3 packet pipeline |
 | [`bibeam-discovery`](./crates/bibeam-discovery) | Coordinator client + rendezvous types |
 | [`bibeam-runtime`](./crates/bibeam-runtime) | Tracing, metrics, config, signals, health |
-| [`bibeam-coordinator`](./crates/bibeam-coordinator) | Rendezvous + matchmaker daemon (axum + redb) |
-| [`bibeam-node`](./crates/bibeam-node) | Dual-role relay/exit daemon |
+| [`bibeam-node`](./crates/bibeam-node) | Merged data-plane (relay/exit/forwarder) + control-plane (rendezvous/admission/rotation) daemon, gated by `is_coordinator` flag (per §11 R-1) |
 | [`bibeam-cli`](./crates/bibeam-cli) | End-user client daemon + CLI |
 | [`xtask`](./crates/xtask) | Workspace ops runner (CI, docs, release helpers) |
 

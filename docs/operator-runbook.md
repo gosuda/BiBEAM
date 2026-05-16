@@ -8,12 +8,11 @@ This file is split in two. Section 1 describes what an operator can run **today*
 
 ## 1. Phase 1 — runnable today
 
-The current state of the three daemons:
+The current state of the two daemons:
 
 | Binary | What it does today |
 |---|---|
-| `bibeam-coordinator` | Prints `bootstrap version=0.0.1` and waits for SIGINT, then exits cleanly with status 0. No network listener, no storage, no config file. |
-| `bibeam-node` | Same as above. No TUN device, no QUIC listener. |
+| `bibeam-node` | Prints `bootstrap version=0.0.1` and waits for SIGINT, then exits cleanly with status 0. No network listener, no storage, no config file. |
 | `bibeam-cli` | Same as above. No connection to a coordinator. |
 
 There is **no** REST API, **no** `/metrics`, **no** `/healthz`, **no** `/readyz`, **no** `--config` flag, **no** redb storage, **no** Noise tunnel, **no** cohort admission, **no** pkarr fallback. None of this is wired up.
@@ -38,11 +37,11 @@ Binaries land in `target/release/`.
 Each binary is exercised by the same one-liner:
 
 ```bash
-./target/release/bibeam-coordinator   # prints bootstrap version=0.0.1
+./target/release/bibeam-node   # prints bootstrap version=0.0.1
 # Ctrl-C to send SIGINT; process exits 0.
 ```
 
-This is the entire Phase 1 operator contract. The point of running it today is to verify the toolchain, the build, and the strict regime end-to-end. Repeat for `bibeam-node` and `bibeam-cli`.
+This is the entire Phase 1 operator contract. The point of running it today is to verify the toolchain, the build, and the strict regime end-to-end. Repeat for `bibeam-cli`.
 
 ### Confirming the strict regime
 
@@ -77,21 +76,24 @@ Oracle Cloud's Virtual Cloud Network security list must mirror any opened ports 
 
 ### 2.2 Install layout (target)
 
+A federated rendezvous deploys 2–3 `bibeam-node` instances with `is_coordinator = true` (control + data plane in one binary); data-plane-only nodes leave the flag unset (per §11 R-1).
+
 ```bash
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin bibeam
-sudo install -m 0755 target/release/bibeam-coordinator /usr/local/bin/
-sudo install -m 0755 target/release/bibeam-node          /usr/local/bin/
+sudo install -m 0755 target/release/bibeam-node /usr/local/bin/
 ```
 
 ### 2.3 systemd units (target)
 
 Both units assume a `--config` flag and persistent state directories that do not exist today. They are presented here so the deployment shape is settled before the implementation lands.
 
-#### `bibeam-coordinator.service` (target)
+The single `bibeam-node` binary services both roles (per §11 R-1); the unit below covers the coord-enabled deployment (with `is_coordinator = true` in `node.toml`) and the data-plane-only deployment (with the flag unset). Operators running both roles on the same host should run two `bibeam-node@<instance>.service` instances with separate config files and state directories rather than a single unit.
+
+#### `bibeam-node.service` — coord-enabled (target)
 
 ```ini
 [Unit]
-Description=BiBEAM coordinator (rendezvous + matchmaker)
+Description=BiBEAM node (control + data plane, is_coordinator = true)
 After=network-online.target
 Wants=network-online.target
 
@@ -99,12 +101,12 @@ Wants=network-online.target
 Type=exec
 User=bibeam
 Group=bibeam
-ExecStart=/usr/local/bin/bibeam-coordinator --config /etc/bibeam/coordinator.toml
+ExecStart=/usr/local/bin/bibeam-node --config /etc/bibeam/node-coord.toml
 Restart=on-failure
 RestartSec=5s
 
-StateDirectory=bibeam-coordinator
-WorkingDirectory=/var/lib/bibeam-coordinator
+StateDirectory=bibeam-node-coord
+WorkingDirectory=/var/lib/bibeam-node-coord
 
 NoNewPrivileges=true
 PrivateTmp=true
@@ -113,7 +115,7 @@ ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-ReadWritePaths=/var/lib/bibeam-coordinator
+ReadWritePaths=/var/lib/bibeam-node-coord
 LockPersonality=true
 RestrictRealtime=true
 RestrictNamespaces=true
@@ -129,7 +131,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-#### `bibeam-node.service` (target)
+#### `bibeam-node.service` — data-plane-only (target)
 
 ```ini
 [Unit]
@@ -190,12 +192,12 @@ This table assumes the daemons actually accept connections and use redb. **All e
 
 | Symptom | Likely cause | Recovery |
 |---|---|---|
-| Coordinator exits at startup with a redb error | State directory not writable by `bibeam` user | `chown bibeam:bibeam /var/lib/bibeam-coordinator` and restart. |
+| Coord-enabled `bibeam-node` exits at startup with a redb error | State directory not writable by `bibeam` user | `chown bibeam:bibeam /var/lib/bibeam-node-coord` and restart. |
 | Node startup fails with `Operation not permitted` opening `/dev/net/tun` | `CAP_NET_ADMIN` missing | Verify the systemd unit, `systemctl daemon-reload`, restart. |
 | `/readyz` returns 503 indefinitely | Coordinator unreachable from the node, or invite key not provisioned | Check the coordinator endpoint list in `node.toml`; verify outbound. |
 | Clients see `admission.insufficient_cohort` repeatedly | Cohort floor (default ≥ 30) not yet met on the chosen exit | Expected at low load. Clients back off and retry. Production deployments must keep the floor ≥ 30; lower floors are development-only. See [`docs/protocol.md`](./protocol.md#cohort-admission-lifecycle). |
 | Prometheus scrape returns connection refused | Metrics bind is loopback-only | Scrape from the same host or set up a tunnel; do not move the bind to a public address. |
-| Coordinator process keeps restarting | Configuration syntax error, port already bound, or storage corruption | `journalctl -u bibeam-coordinator -n 200`; fix the underlying cause; do not mask with `Restart=always`. |
+| Coord-enabled `bibeam-node` keeps restarting | Configuration syntax error, port already bound, or storage corruption | `journalctl -u bibeam-node -n 200`; fix the underlying cause; do not mask with `Restart=always`. |
 | All coordinators unreachable from a client | Network-level block of every configured coordinator | Client falls back to pkarr-on-Mainline-DHT for discovery — degraded path with no admission gate, no anonymity-set guarantee. See [`docs/architecture.md`](./architecture.md#control-plane). |
 
 ### 2.6 Upgrades (target)
@@ -210,4 +212,4 @@ Forward-compatibility within a major version is a design goal for the on-disk re
 
 ### 2.7 Backup (target)
 
-The coordinator will hold invite state and peer registrations in `/var/lib/bibeam-coordinator/`. Online snapshots are a design goal; concrete commands land with the coordinator implementation. Node hosts have no critical persistent state in the target design — they can be reprovisioned from scratch.
+A coord-enabled `bibeam-node` will hold invite state and peer registrations in `/var/lib/bibeam-node-coord/`. Online snapshots are a design goal; concrete commands land with the coordinator implementation. Data-plane-only nodes have no critical persistent state in the target design — they can be reprovisioned from scratch.

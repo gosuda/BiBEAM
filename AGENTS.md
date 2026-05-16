@@ -30,9 +30,9 @@ cargo run -p xtask -- gen-readmes --check  # drift gate
 
 ## Workspace layout
 
-See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map, the two-plane control/data split, and the request flow. The eleven crates live under `crates/`:
+See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map, the two-plane control/data split, and the request flow. The ten crates live under `crates/`:
 
-`bibeam-core`, `bibeam-protocol`, `bibeam-crypto`, `bibeam-transport`, `bibeam-tun`, `bibeam-discovery`, `bibeam-runtime` (libraries) · `bibeam-coordinator`, `bibeam-node`, `bibeam-cli` (daemons) · `xtask` (ops runner).
+`bibeam-core`, `bibeam-protocol`, `bibeam-crypto`, `bibeam-transport`, `bibeam-tun`, `bibeam-discovery`, `bibeam-runtime` (libraries) · `bibeam-node`, `bibeam-cli` (daemons) · `xtask` (ops runner). The `bibeam-node` daemon carries both data-plane and control-plane roles in a single binary, gated by the `is_coordinator` config flag (per §11 R-1; the previously-separate `bibeam-coordinator` crate was dissolved into `bibeam-node`'s `src/coordinator/` module).
 
 ## Strict regime — non-negotiable
 

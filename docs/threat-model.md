@@ -109,6 +109,62 @@ And does **not** know:
 - **No peer-to-peer signalling through the exit.** The exit forwards L3 packets toward the public Internet, not laterally to other cohort members.
 - **Coordinator gating.** A peer attempting to flood admission with many invites to dominate a cohort runs into per-invite rate limits and the invite-distribution chokepoint.
 
+## Merged-node trust boundary (R-1) and option-(c) forwarder visibility (R-4)
+
+### Merged-node trust boundary (§11 R-1)
+
+Per §11 R-1, the previously-separate `bibeam-coordinator` daemon dissolved into `bibeam-node` as the `src/coordinator/` module. A single binary now carries both the data-plane (relay / exit / forwarder per §11 D-6 picks) AND the control-plane (rendezvous / admission / rotation) roles, gated by the `is_coordinator = true` config flag. Trust-boundary consequences:
+
+- A compromised coord-enabled `bibeam-node` leaks both control-plane metadata it admitted AND that node's own data-plane keys.
+- Each coord-enabled node only knows registrations it admitted. Cross-coord state is replicated minimally via the P2A-1 lease-elected leader path (independent coordinators, no inter-coord synchronous replication at MVP).
+- Operators deploying for paranoia-grade isolation may keep coord-enabled nodes physically separated from busy exit nodes within the federation, accepting the operational cost.
+
+### Option-(c) forwarder visibility (§11 R-4 Architecture; D-6 RESOLVED)
+
+The multi-hop cryptographic construction is option (c): stateful UDP forwarder + end-to-end client↔exit WireGuard session (TURN-style). A forwarder at position p observes every UDP datagram the client and exit exchange. Split the visibility model by packet type:
+
+**Data packets (WireGuard `MessageData`, type = 4).** A forwarder sees:
+
+- the outer-envelope addressing (src IP+port → dst IP+port);
+- the WireGuard transport header bytes (message type, receiver index, counter);
+- the AEAD ciphertext + Poly1305 tag bytes;
+- packet timing and size.
+
+A forwarder does NOT see:
+
+- the inner IP packet (the user's actual traffic — ChaCha20-Poly1305 sealed, key established end-to-end);
+- the transport keys (negotiated end-to-end during the handshake);
+- the user's plaintext L3 frame contents.
+
+**Handshake packets.** A forwarder sees the raw bytes of every handshake message that crosses it. Every handshake type shares:
+
+- the outer-envelope addressing and packet timing/size;
+- the handshake message-type byte (1 / 2 / 3).
+
+Per-type fields visible as opaque blobs:
+
+- `MessageInitiation` (type 1) — `sender_index`, `unencrypted_ephemeral`, `encrypted_static`, `encrypted_timestamp`, `MAC1`, `MAC2`.
+- `MessageResponse` (type 2) — `sender_index`, `receiver_index`, `unencrypted_ephemeral`, `encrypted_nothing`, `MAC1`, `MAC2`.
+- `MessageCookieReply` (type 3) — `receiver_index`, `nonce`, `encrypted_cookie`.
+
+A forwarder cannot:
+
+- validate MAC1 against the exit's static public key (it does not hold the key);
+- decrypt the encrypted-static / encrypted-timestamp / encrypted-cookie fields (handshake key derivation is end-to-end between client and exit);
+- derive the resulting transport keys or session payload.
+
+So the forwarder can fingerprint the *shape* of a WireGuard handshake on the wire (and learn that two endpoints handshook at some moment), but it cannot extract identities or session secrets from the bytes it sees.
+
+The exit is the only WG endpoint that sees plaintext, as in single-hop.
+
+### R-3 per-position floor scope (topology vs decoding)
+
+The §11 R-3 per-position floor (`≥ 29 other in-role flows` at every position in the path) is a **topology-only** constraint — it bounds *who* is observable-by an adversary at each position. *What* an observer at a position can decode is the orthogonal D-6 cryptographic-construction concern; under option (c) the forwarder sees only ciphertext + address pair. Both layers are load-bearing.
+
+### Key custody (option (c))
+
+Client and exit each generate their own X25519 WG keypairs at registration time and publish only their public keys to the coordinator. The coordinator never holds WG private key material for either endpoint. Coord acts as a pairing service for public keys + leases, not a key issuer (per §11 D-6 cascading-edits).
+
 ## Replay, downgrade, impersonation
 
 - **Replay.** PASETO `jti` is a UUID v7 and is checked against a per-exit seen-set retained until each token's `exp` passes (TTL-keyed, no capacity-driven eviction). Tokens are bound to a single exit via `aud`; replay against a different exit fails the `aud` check.
