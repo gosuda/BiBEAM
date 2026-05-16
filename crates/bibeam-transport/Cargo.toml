@@ -12,6 +12,7 @@ description = "`WireGuard` data plane built on the `boringtun` userspace state m
 bibeam-core = { workspace = true }
 bibeam-protocol = { workspace = true }
 bibeam-crypto = { workspace = true }
+bibeam-runtime = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 boringtun = { workspace = true }
@@ -25,6 +26,7 @@ governor = { workspace = true }
 postcard = { workspace = true }
 rand = { workspace = true }
 futures-util = { workspace = true }
+metrics = { workspace = true }
 parking_lot = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
@@ -36,4 +38,4 @@ time = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "webpki-roots", "ipnet", "base64", "bytes", "fast-socks5", "futures-util", "governor", "parking_lot", "postcard", "rand", "thiserror", "tracing"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-runtime", "tokio", "tokio-util", "boringtun", "rustls", "webpki-roots", "ipnet", "base64", "bytes", "fast-socks5", "futures-util", "governor", "metrics", "parking_lot", "postcard", "rand", "thiserror", "tracing"]
