@@ -32,10 +32,12 @@ pub const WG_KEY_LEN: usize = 32;
 /// X25519 secret key for a `WireGuard` peer.
 ///
 /// The wrapped [`StaticSecret`] is zeroised on drop by the
-/// `x25519-dalek` crate's default `zeroize` feature; this newtype
-/// adds a redacted [`core::fmt::Debug`] impl so the bytes cannot leak
-/// through `tracing` or `format!("{:?}", …)`.
-#[derive(Clone)]
+/// `x25519-dalek` crate's default `zeroize` feature; the
+/// [`ZeroizeOnDrop`] derive on this newtype is the explicit
+/// type-level marker that F-CRYPTO.7's audit consumes. The redacted
+/// [`core::fmt::Debug`] impl below means the bytes cannot leak
+/// through `tracing` or `format!("{:?}", …)` either.
+#[derive(Clone, ZeroizeOnDrop)]
 pub struct WgSecretKey(StaticSecret);
 
 impl core::fmt::Debug for WgSecretKey {

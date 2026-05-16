@@ -20,14 +20,15 @@ use ed25519_dalek::pkcs8::{
 };
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey, ed25519::signature::Signer};
 use thiserror::Error;
-use zeroize::Zeroizing;
+use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 /// Long-term Ed25519 signing key.
 ///
 /// Used by the coordinator side to sign invite codes and the matching
 /// session metadata. The wrapped [`SigningKey`] already implements
-/// `ZeroizeOnDrop`, so dropping this value scrubs the underlying
-/// scalar bytes.
+/// `ZeroizeOnDrop`; the explicit derive on this newtype is the
+/// type-level marker that F-CRYPTO.7's audit consumes.
+#[derive(ZeroizeOnDrop)]
 pub struct IdentitySecretKey(SigningKey);
 
 impl core::fmt::Debug for IdentitySecretKey {

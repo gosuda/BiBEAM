@@ -96,6 +96,12 @@ pub fn derive_wg_psk(session_psk: &SessionPsk, rotation_counter: u64) -> Result<
 /// Use a unique `info` per derivation purpose. Two call sites that
 /// share `info` over the same PRK will collide.
 ///
+/// Callers should wrap the returned `[u8; 32]` in
+/// [`zeroize::Zeroizing`] or move it into a [`zeroize::Zeroize`]-derived
+/// newtype (the established pattern in this crate, e.g.
+/// [`SessionPsk`], [`WgPsk`]) so the secret bytes are scrubbed on
+/// drop.
+///
 /// # Errors
 ///
 /// - [`KdfError::PrkTooShort`] if `prk.len() < 32`.
