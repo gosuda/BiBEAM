@@ -58,6 +58,9 @@ etherparse = "0.20"
 ipnet = "2"
 hickory-resolver = { version = "0.26", default-features = false, features = ["tokio", "system-config"] }
 
+# --- GeoIP (operator-supplied GeoLite2-Country DB; cross-check only — see R-REGION.2 / D-5) ---
+maxminddb = "0.28"
+
 # --- HTTP / WS ---
 axum = { version = "0.8", features = ["macros", "ws", "json", "tokio"] }
 tower = "0.5"

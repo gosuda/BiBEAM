@@ -17,6 +17,7 @@ pub mod admission_gate;
 pub mod audit;
 pub mod cluster;
 pub mod cohorts;
+pub mod geoip_verify;
 pub mod health;
 pub mod invite_admission;
 pub mod log_hooks;
@@ -24,3 +25,5 @@ pub mod rate_limit;
 pub mod registry;
 pub mod rotation;
 pub mod server;
+
+pub use geoip_verify::GeoipReader;

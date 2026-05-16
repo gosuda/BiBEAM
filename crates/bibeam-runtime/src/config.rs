@@ -16,13 +16,13 @@
 //! directly elsewhere in the codebase — the env-prefix and merge
 //! order live here so they cannot drift.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use figment::{
     Figment,
     providers::{Env, Format as _, Toml},
 };
-use serde::de::DeserializeOwned;
+use serde::{Deserialize, de::DeserializeOwned};
 use thiserror::Error;
 
 /// Environment-variable prefix shared by every `BiBEAM` binary's
@@ -85,6 +85,53 @@ pub fn load<C: DeserializeOwned>(toml_path: Option<&Path>) -> Result<C, ConfigEr
     }
     figment = figment.merge(Env::prefixed(ENV_PREFIX).split(ENV_NESTED_SEP));
     figment.extract::<C>().map_err(|err| ConfigError::Figment(Box::new(err)))
+}
+
+/// `[geoip]` config block for coord-enabled `bibeam-node` instances
+/// (R-REGION.2 / D-5).
+///
+/// The operator supplies the `MaxMind` `GeoLite2-Country` DB file at
+/// deploy time; the coordinator's `geoip_verify` module loads it
+/// and cross-checks each peer's declared `region` against the
+/// country code derived from its observed IP. Per D-5 the MVP
+/// response is warn-only: a mismatch emits an audit-log entry,
+/// admission proceeds either way.
+///
+/// Coord-config roots should wrap this in `Option<GeoipConfig>` so
+/// deployments without a `GeoIP` DB still load cleanly — `None`
+/// means "`GeoIP` cross-check disabled".
+///
+/// # Example TOML
+///
+/// ```toml
+/// [geoip]
+/// mmdb_path = "/var/lib/bibeam/GeoLite2-Country.mmdb"
+/// refresh_interval_secs = 86400
+/// mismatch_allowlist_cidrs = ["10.0.0.0/8", "203.0.113.0/24"]
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct GeoipConfig {
+    /// Path to the `GeoLite2-Country` `.mmdb` file. Operator-supplied
+    /// — `MaxMind`'s data license forbids redistribution, so the
+    /// repo never ships one. The operator-runbook documents how to
+    /// obtain a fresh DB.
+    pub mmdb_path: PathBuf,
+    /// Refresh interval in seconds for re-loading the DB file from
+    /// disk. `0` means "never auto-refresh" — the operator
+    /// restarts the coord process after updating the DB.
+    #[serde(default)]
+    pub refresh_interval_secs: u64,
+    /// CIDRs to skip the `GeoIP` cross-check for. Operators add
+    /// expected-mismatch ranges here (e.g. a CDN-fronted load
+    /// balancer whose edge IP geolocates differently from the
+    /// node's actual hosting region). Defaults to an empty list.
+    ///
+    /// The strings are operator-facing — they are parsed by the
+    /// caller (R-REGION.3) and not validated by this struct so a
+    /// malformed entry surfaces as an admission-time warning rather
+    /// than a startup-time hard fail.
+    #[serde(default)]
+    pub mismatch_allowlist_cidrs: Vec<String>,
 }
 
 #[cfg(test)]

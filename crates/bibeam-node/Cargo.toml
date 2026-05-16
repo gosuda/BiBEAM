@@ -48,6 +48,8 @@ ulid = { workspace = true }
 governor = { workspace = true }
 parking_lot = { workspace = true }
 dashmap = { workspace = true }
+# --- GeoIP cross-check (R-REGION.2 / D-5): operator-supplied GeoLite2-Country DB ---
+maxminddb = { workspace = true }
 
 [dev-dependencies]
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---
