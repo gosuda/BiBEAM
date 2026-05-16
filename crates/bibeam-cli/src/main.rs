@@ -4,6 +4,7 @@
 mod cli;
 mod exit_pick;
 mod register;
+mod rotation;
 mod tun_setup;
 
 use anyhow::Result;

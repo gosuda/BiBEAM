@@ -32,6 +32,12 @@ base64 = { workspace = true }             # invite wire form is base64-postcard 
 rand = { workspace = true }               # fresh per-seal nonce for the on-disk session-token AEAD
 directories = { workspace = true }        # platform-standard config_dir resolution for state.key / state/session.bin
 blake3 = { workspace = true }             # 64-bit issuer-fingerprint preview in log lines
+tokio-util = { workspace = true }         # CancellationToken for the F-CLI.5 rotation loop
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] } # virtual-time test fixtures for rotation_loop (start_paused)
+futures-util = { workspace = true }                    # BoxFuture in rotation-loop tests; FnMut(...) -> impl Future trait shape requires explicit boxing
+parking_lot = { workspace = true }                     # rotation-loop tests record causes through a parking_lot::Mutex (workspace policy forbids std::sync::Mutex)
 
 # Linux-only capability inspection. The `caps` crate ships no
 # macOS / Windows targets, so `setup_tun()`'s privilege guard
