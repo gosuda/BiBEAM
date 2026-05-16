@@ -15,6 +15,12 @@
 //! stateful UDP forwarder mode (R-MULTIHOP-NODE): a per-pair
 //! routing table + lease-enforced relay loop that never touches
 //! `WireGuard` payload material.
+//!
+//! The [`telemetry`] sub-module defines the node data-plane
+//! Prometheus metric names (counters / gauges) and a
+//! [`telemetry::register_node_metrics`] entry point that attaches
+//! `# HELP` and `# TYPE` metadata via the [`metrics`] facade (F-NODE.9).
 
 pub mod coordinator;
 pub mod forwarder;
+pub mod telemetry;
