@@ -469,6 +469,7 @@ name = "bibeam-node"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "arc-swap",
  "async-trait",
  "axum",
  "bibeam-core",

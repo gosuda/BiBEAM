@@ -117,6 +117,12 @@ governor = "0.10"
 parking_lot = "0.12"
 dashmap = "6"
 async-trait = "0.1"
+# `arc-swap` provides a lock-free atomic swap of an `Arc<T>` value. F-NODE.6's
+# rotation handler uses it for O(1) handover of the active `CohortLive`
+# snapshot on every `CohortRotated` event: the old cohort drains naturally
+# as in-flight readers drop their `Arc<CohortLive>` clones and its refcount
+# falls to zero.
+arc-swap = "1"
 
 # --- test / bench / fuzz ---
 proptest = "1"

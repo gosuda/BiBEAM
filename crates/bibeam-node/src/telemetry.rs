@@ -102,6 +102,16 @@ pub const NODE_DNS_RESOLUTIONS_TOTAL: &str = "bibeam_node_dns_resolutions_total"
 ///            (single-source flood protection).
 pub const NODE_RATE_LIMIT_DROPS_TOTAL: &str = "bibeam_node_rate_limit_drops_total";
 
+/// Prometheus metric name: total cohort rotation events the node
+/// processed.
+///
+/// Incremented once per successful atomic cohort swap inside
+/// [`crate::rotation_handler::RotationHandler::swap_to`] (F-NODE.6).
+/// Unlabelled: a cohort rotation is a process-wide event and the
+/// node only ever owns a single active cohort at a time, so there is
+/// no useful label dimension to slice on.
+pub const NODE_COHORT_ROTATIONS_TOTAL: &str = "bibeam_node_cohort_rotations_total";
+
 // -------------------------------------------------------------------
 // Gauges — Prometheus convention: name does NOT end in `_total`.
 // -------------------------------------------------------------------
@@ -177,6 +187,11 @@ pub fn register_node_metrics() {
         Unit::Count,
         "Total rate-limit drops, labelled by kind (cohort|peer)."
     );
+    describe_counter!(
+        NODE_COHORT_ROTATIONS_TOTAL,
+        Unit::Count,
+        "Total cohort rotation events processed by the node's RotationHandler (F-NODE.6)."
+    );
 
     // Gauges ----------------------------------------------------------
     describe_gauge!(
@@ -221,6 +236,7 @@ mod tests {
         NODE_SOCKS5_CONNECTIONS_TOTAL,
         NODE_DNS_RESOLUTIONS_TOTAL,
         NODE_RATE_LIMIT_DROPS_TOTAL,
+        NODE_COHORT_ROTATIONS_TOTAL,
     ];
 
     /// The complete set of gauge names this module defines.

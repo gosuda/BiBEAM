@@ -37,10 +37,18 @@
 //! IP packets to a kernel TUN device for operator-configured NAT
 //! egress, and an L4 SOCKS5 fallback for environments where a TUN
 //! device cannot be opened.
+//!
+//! The [`rotation_handler`] sub-module owns the node-side response to
+//! coordinator-pushed `CohortRotated` events (F-NODE.6). It wraps the
+//! active [`bibeam_protocol::cohort::CohortLive`] snapshot in an
+//! `arc_swap::ArcSwap` so the active cohort can be swapped atomically
+//! and lock-free; in-flight readers hold an [`std::sync::Arc`] clone
+//! and drain naturally as the old cohort's refcount falls to zero.
 
 pub mod coordinator;
 pub mod dns;
 pub mod exit_mode;
 pub mod forwarder;
 pub mod rate_limit;
+pub mod rotation_handler;
 pub mod telemetry;
