@@ -20,6 +20,7 @@ webpki-roots = { workspace = true }
 ipnet = { workspace = true }
 base64 = { workspace = true }
 bytes = { workspace = true }
+fast-socks5 = { workspace = true }
 postcard = { workspace = true }
 rand = { workspace = true }
 futures-util = { workspace = true }
@@ -34,4 +35,4 @@ time = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "webpki-roots", "ipnet", "base64", "bytes", "futures-util", "parking_lot", "postcard", "rand", "thiserror", "tracing"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "webpki-roots", "ipnet", "base64", "bytes", "fast-socks5", "futures-util", "parking_lot", "postcard", "rand", "thiserror", "tracing"]

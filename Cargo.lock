@@ -441,6 +441,7 @@ dependencies = [
  "bibeam-protocol",
  "boringtun",
  "bytes",
+ "fast-socks5",
  "futures-util",
  "ipnet",
  "parking_lot",
