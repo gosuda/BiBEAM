@@ -477,9 +477,11 @@ version = "0.0.1"
 dependencies = [
  "bibeam-core",
  "bytes",
+ "dashmap",
  "etherparse",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
  "tracing",
  "tun-rs",
 ]
