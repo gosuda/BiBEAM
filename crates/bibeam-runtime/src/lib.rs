@@ -10,7 +10,7 @@ pub mod redaction_layer;
 pub mod shutdown;
 pub mod signal;
 
-pub use config::{ConfigError, GeoipConfig, load as load_config};
+pub use config::{ConfigError, GeoipConfig, RateLimitConfig, load as load_config};
 pub use health::{ReadyLatch, router as health_router};
 pub use log::{LogInitError, init_json_logging};
 pub use metrics::{MetricsError, router as metrics_router};

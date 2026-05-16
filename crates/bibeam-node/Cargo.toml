@@ -46,6 +46,10 @@ blake3 = { workspace = true }
 ulid = { workspace = true }
 governor = { workspace = true }
 parking_lot = { workspace = true }
+# --- F-NODE.8 node data-plane rate limiter: per-cohort + per-peer DashMap of
+# `DefaultDirectRateLimiter` instances. Distinct from coord rate limiting
+# (F-COORD.9), which keys on source IP + PeerId via governor's keyed limiter. ---
+dashmap = { workspace = true }
 # --- GeoIP cross-check (R-REGION.2 / D-5): operator-supplied GeoLite2-Country DB ---
 maxminddb = { workspace = true }
 # --- multi-hop path-assembly (R-MULTIHOP-COORD) — WgPeerConfig.allowed_ips uses IpNet;

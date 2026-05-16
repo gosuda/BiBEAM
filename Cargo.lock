@@ -480,6 +480,7 @@ dependencies = [
  "blake3",
  "bytes",
  "clap",
+ "dashmap",
  "fast-socks5",
  "governor",
  "hickory-resolver",

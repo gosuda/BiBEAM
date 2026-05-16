@@ -87,6 +87,65 @@ pub fn load<C: DeserializeOwned>(toml_path: Option<&Path>) -> Result<C, ConfigEr
     figment.extract::<C>().map_err(|err| ConfigError::Figment(Box::new(err)))
 }
 
+/// `[rate_limit]` config block for the node data-plane rate limiter
+/// (F-NODE.8).
+///
+/// Caps the per-cohort and per-peer packet rate the node will accept
+/// on its data-plane path. Distinct from the coord control-plane
+/// rate limit (F-COORD.9, which keys on source IP + `PeerId` and
+/// lives in `bibeam-node::coordinator::rate_limit`); this struct
+/// configures the data-plane limiter implemented in
+/// `bibeam-node::rate_limit`.
+///
+/// Both caps are operator-configurable through the standard TOML +
+/// `BIBEAM_RATE_LIMIT__*` env-var overlay loaded by [`load`].
+/// Defaults reflect the F-NODE.8 spec:
+///
+/// - `per_cohort_pps = 10_000`
+/// - `per_peer_pps   = 1_000`
+///
+/// A zero cap is a configuration error (would mean "block
+/// everyone"); the limiter's constructor surfaces it as a typed
+/// startup failure rather than silently denying every packet.
+///
+/// `serde(default)` is applied so a partial `[rate_limit]` block —
+/// or an absent block — falls through to the defaults instead of
+/// failing to parse.
+///
+/// # Example TOML
+///
+/// ```toml
+/// [rate_limit]
+/// per_cohort_pps = 25_000
+/// per_peer_pps   = 2_500
+/// ```
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct RateLimitConfig {
+    /// Per-cohort packets-per-second cap. Default: `10_000`.
+    pub per_cohort_pps: u32,
+    /// Per-peer packets-per-second cap. Default: `1_000`.
+    pub per_peer_pps: u32,
+}
+
+impl RateLimitConfig {
+    /// Default per-cohort packets-per-second cap (F-NODE.8 spec).
+    pub const DEFAULT_PER_COHORT_PPS: u32 = 10_000;
+    /// Default per-peer packets-per-second cap (F-NODE.8 spec).
+    pub const DEFAULT_PER_PEER_PPS: u32 = 1_000;
+}
+
+impl Default for RateLimitConfig {
+    /// Returns the F-NODE.8 MVP defaults: `per_cohort_pps = 10_000`,
+    /// `per_peer_pps = 1_000`.
+    fn default() -> Self {
+        Self {
+            per_cohort_pps: Self::DEFAULT_PER_COHORT_PPS,
+            per_peer_pps: Self::DEFAULT_PER_PEER_PPS,
+        }
+    }
+}
+
 /// `[geoip]` config block for coord-enabled `bibeam-node` instances
 /// (R-REGION.2 / D-5).
 ///
@@ -203,6 +262,43 @@ mod tests {
     #[derive(Debug, Deserialize, PartialEq, Eq)]
     struct Transport {
         bind_addr: String,
+    }
+
+    #[test]
+    fn rate_limit_config_defaults_match_spec() {
+        // Contract: the F-NODE.8 MVP defaults are `per_cohort_pps =
+        // 10_000` and `per_peer_pps = 1_000`. A regression that
+        // silently bumped a cap (or shrank it) would either degrade
+        // throughput or expand the data-plane budget an attacker
+        // gets per cohort/peer. The constants live next to the
+        // `Default` impl so the test catches drift in either.
+        let default = RateLimitConfig::default();
+        assert_eq!(default.per_cohort_pps, 10_000);
+        assert_eq!(default.per_peer_pps, 1_000);
+        assert_eq!(RateLimitConfig::DEFAULT_PER_COHORT_PPS, 10_000);
+        assert_eq!(RateLimitConfig::DEFAULT_PER_PEER_PPS, 1_000);
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    struct RateLimitRoot {
+        rate_limit: RateLimitConfig,
+    }
+
+    #[test]
+    fn rate_limit_config_loads_from_partial_toml() {
+        // Contract: `serde(default)` on `RateLimitConfig` lets a
+        // partial `[rate_limit]` block — operator overrides only one
+        // cap — load cleanly, with the unmentioned field falling
+        // through to the spec default. A regression dropping
+        // `serde(default)` would force operators to either supply
+        // both caps or no block at all.
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("bibeam.toml", "[rate_limit]\nper_cohort_pps = 25000\n")?;
+            let cfg: RateLimitRoot = load(Some(Path::new("bibeam.toml"))).unwrap();
+            assert_eq!(cfg.rate_limit.per_cohort_pps, 25_000);
+            assert_eq!(cfg.rate_limit.per_peer_pps, RateLimitConfig::DEFAULT_PER_PEER_PPS,);
+            Ok(())
+        });
     }
 
     #[test]

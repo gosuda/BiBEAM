@@ -25,8 +25,15 @@
 //! own DNS needs (exit-mode DNS-over-TLS bootstrap, control-plane
 //! peer hostname resolution); it falls back to public DNS when the
 //! system configuration is unavailable (F-NODE.7).
+//!
+//! The [`rate_limit`] sub-module caps per-cohort and per-peer
+//! data-plane packet rates (F-NODE.8). It is distinct from the
+//! coord control-plane rate limit at
+//! [`coordinator::rate_limit`], which keys on source IP +
+//! `PeerId` for the four HTTP control-plane verbs.
 
 pub mod coordinator;
 pub mod dns;
 pub mod forwarder;
+pub mod rate_limit;
 pub mod telemetry;
