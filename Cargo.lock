@@ -444,6 +444,7 @@ dependencies = [
  "futures-util",
  "ipnet",
  "parking_lot",
+ "postcard",
  "rand 0.10.1",
  "rustls",
  "thiserror 2.0.18",
