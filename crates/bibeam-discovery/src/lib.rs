@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
+pub mod bootstrap;
 pub mod error;
 pub mod failover;
 pub mod http;
@@ -9,6 +10,7 @@ pub mod pkarr_fallback;
 pub mod records;
 pub mod ws;
 
+pub use bootstrap::{BootstrappedSession, PeerProfile, SessionBootstrap};
 pub use error::DiscoveryError;
 pub use failover::CoordinatorPool;
 pub use http::{CoordinatorClient, status_is_retriable};
