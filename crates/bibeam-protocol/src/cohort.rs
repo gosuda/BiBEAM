@@ -16,6 +16,8 @@
 //! drives admission and rotation; these messages are the cohort plane
 //! itself, broadcast within the cohort.
 
+use std::collections::HashMap;
+
 use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +49,24 @@ pub struct CohortLive {
     pub members: Vec<PeerId>,
     /// Current exit nodes serving `cohort`'s traffic.
     pub exits: Vec<NodeId>,
+    /// Per-exit operator-tagged region tag, indexed by [`NodeId`] from
+    /// [`Self::exits`]. Same free-form string shape as
+    /// `bibeam_discovery::ExitRecord::region` (R-REGION.1) — the
+    /// coordinator copies the tag verbatim from the discovery record at
+    /// snapshot time. Missing entries mean "region unknown for that
+    /// exit"; callers that filter by a requested region MUST treat a
+    /// missing tag as a non-match, never as a wildcard.
+    ///
+    /// Defaults to an empty map for backward-compat: pre-region
+    /// snapshots (and the cohort-emitter's TODO under F-CLI.4b) will
+    /// deserialise into the missing-tag-is-non-match branch.
+    // TODO(R-REGION.3): the coordinator-side cohort emitter has to
+    // populate this map from `ExitRecord::region` whenever a cohort is
+    // admitted or rotated. Until that lands, every snapshot ships an
+    // empty map and `pick_exit(..., Some(r))` will always refuse —
+    // matching the §11 R-3 "no exit in <region>; defer" semantics.
+    #[serde(default)]
+    pub exit_regions: HashMap<NodeId, String>,
     /// When this snapshot was captured.
     pub at: Timestamp,
 }

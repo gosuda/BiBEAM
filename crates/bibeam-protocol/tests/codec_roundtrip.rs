@@ -115,13 +115,24 @@ fn arb_cohort_admit() -> impl Strategy<Value = CohortAdmit> {
 }
 
 fn arb_cohort_live() -> impl Strategy<Value = CohortLive> {
+    // Keep the tuple arity unchanged: `exit_regions` is set to an
+    // empty map here. The map's serde round-trip is exercised
+    // implicitly via the empty-map encoding; randomising the map's
+    // shape would couple this strategy to the cohort-emitter
+    // (F-CLI.4b / R-REGION.3) which has not yet landed.
     (
         arb_cohort_id(),
         vec(arb_peer_id(), 0..8),
         vec(arb_node_id(), 0..8),
         arb_timestamp(),
     )
-        .prop_map(|(cohort, members, exits, at)| CohortLive { cohort, members, exits, at })
+        .prop_map(|(cohort, members, exits, at)| CohortLive {
+            cohort,
+            members,
+            exits,
+            exit_regions: std::collections::HashMap::new(),
+            at,
+        })
 }
 
 fn arb_cohort_rotate() -> impl Strategy<Value = CohortRotate> {

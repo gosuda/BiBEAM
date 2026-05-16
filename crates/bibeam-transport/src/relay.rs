@@ -257,6 +257,7 @@ mod tests {
                 cohort: bibeam_core::CohortId::new(),
                 members: vec![],
                 exits: vec![],
+                exit_regions: std::collections::HashMap::new(),
                 at: bibeam_core::Timestamp::now(),
             }));
         let outcome = path.recv(cohort_frame).await.expect("recv ok");

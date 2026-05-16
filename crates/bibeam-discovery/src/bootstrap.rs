@@ -224,6 +224,15 @@ impl SessionBootstrap {
             cohort: match_response.cohort,
             members: Vec::new(),
             exits: match_response.exit_set,
+            // TODO(R-REGION.3): once the coordinator's
+            // `MatchResponse` carries per-exit region tags, populate
+            // `exit_regions` from the response here so the client's
+            // region-aware exit pick (F-CLI.4b) has real data to
+            // filter on. Until that lands the map stays empty and
+            // any `pick_exit(..., Some(r))` refuses — which matches
+            // the §11 R-3 "no exit in requested_region; defer to
+            // retry / fallback to multi-hop" semantics.
+            exit_regions: std::collections::HashMap::new(),
             at: Timestamp::now(),
         };
         Ok(BootstrappedSession {

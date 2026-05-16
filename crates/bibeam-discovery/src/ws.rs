@@ -264,6 +264,7 @@ mod tests {
             cohort: CohortId::new(),
             members: vec![PeerId::new()],
             exits: vec![NodeId::new()],
+            exit_regions: std::collections::HashMap::new(),
             at: Timestamp::now(),
         }
     }
