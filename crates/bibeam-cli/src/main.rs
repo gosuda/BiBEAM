@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 mod cli;
+mod register;
 mod tun_setup;
 
 use anyhow::Result;

@@ -129,11 +129,10 @@ async fn handle_init(config_override: Option<&std::path::Path>) -> Result<()> {
 }
 
 /// `up` — partial; F-CLI.2 wires the privilege-guarded TUN
-/// setup. Bootstrap (F-CLI.3+) and the SOCKS5 fallback
-/// (F-CLI.8) arrive in later sub-items; for now the handler
-/// delegates to [`probe_tun_or_fallback`] so the cognitive
-/// score of the cli-side dispatch stays compact as later
-/// sub-items extend it.
+/// setup. F-CLI.3 adds the invite parse step before the probe
+/// (so operators get a typed parse error before any TUN work).
+/// Full bootstrap, rotation, and SOCKS5 fallback land in
+/// F-CLI.5 through F-CLI.8.
 async fn handle_up(
     config_override: Option<&std::path::Path>,
     invite: Option<String>,
@@ -143,9 +142,72 @@ async fn handle_up(
         config_override = ?config_override,
         has_invite = invite.is_some(),
         daemonise,
-        "up: invoking TUN setup probe (F-CLI.2)",
+        "up: invoking invite parse + TUN setup probe (F-CLI.3, F-CLI.2)",
     );
+    let armoured = obtain_invite_string(invite)?;
+    log_parsed_invite(&armoured)?;
     probe_tun_or_fallback().await
+}
+
+/// Resolve the invite string: prefer `--invite`, fall back to a
+/// stdin prompt. Kept as a free fn so [`handle_up`] stays compact.
+fn obtain_invite_string(supplied: Option<String>) -> Result<String> {
+    if let Some(arg) = supplied {
+        return Ok(arg);
+    }
+    crate::register::read_invite_from_stdin()
+        .map_err(|err| anyhow::Error::new(err).context("up: read invite from stdin"))
+}
+
+/// Parse the armoured invite, log its issuer fingerprint, and
+/// surface a typed error on malformed input. The verified
+/// `SignedInvite` is *not* yet handed to a
+/// `bibeam_discovery::SessionBootstrap` — that wire-up lands in
+/// F-CLI.5 / F-CLI.6 once `CoordinatorPool` + `PasetoVerifier`
+/// come from config.
+fn log_parsed_invite(armoured: &str) -> Result<()> {
+    let invite = crate::register::parse_invite(armoured)
+        .map_err(|err| anyhow::Error::new(err).context("up: invite parse"))?;
+    let fingerprint = issuer_fingerprint_hex(invite.issuer.as_bytes());
+    tracing::info!(
+        issuer_fp_blake3_prefix = %fingerprint,
+        expires_at = ?invite.expires_at,
+        "up: invite parsed — bootstrap wire-up lands in F-CLI.5 / F-CLI.6",
+    );
+    Ok(())
+}
+
+/// Render a short BLAKE3 fingerprint of the issuer's raw bytes
+/// for log lines. Returns the first 16 hex characters (64 bits) —
+/// matches the operator-runbook convention for redacted IDs.
+fn issuer_fingerprint_hex(issuer_bytes: &[u8; 32]) -> String {
+    let digest = blake3::hash(issuer_bytes);
+    let prefix = &digest.as_bytes()[..8];
+    hex_encode(prefix)
+}
+
+/// Lowercase hex lookup table. One byte expands to two nybbles,
+/// each indexed into `HEX_LUT`. Avoids `fmt::Write` (whose
+/// `Result` discards trip the workspace's strict lint gate) and
+/// keeps the encoder pure and panic-free.
+const HEX_LUT: &[u8; 16] = b"0123456789abcdef";
+
+/// Encode `bytes` as lowercase hex without pulling in the `hex`
+/// crate. Each input byte produces exactly two ASCII output
+/// bytes, so the indexing is bounds-checked once via the LUT
+/// constant.
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut out = Vec::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let high = usize::from(*byte >> 4);
+        let low = usize::from(*byte & 0x0f);
+        out.push(HEX_LUT[high]);
+        out.push(HEX_LUT[low]);
+    }
+    // SAFETY of `from_utf8_unchecked` would be sound here
+    // (every HEX_LUT byte is ASCII), but #![forbid(unsafe_code)]
+    // bars it; the safe constructor is a no-op validation pass.
+    String::from_utf8(out).unwrap_or_default()
 }
 
 /// Probe the TUN setup once and route the three outcomes:
