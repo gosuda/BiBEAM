@@ -25,6 +25,9 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+[dev-dependencies]
+figment = { workspace = true, features = ["test"] }
+
 [lints]
 workspace = true
 
