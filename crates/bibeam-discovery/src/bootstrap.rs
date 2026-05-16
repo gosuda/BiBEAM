@@ -244,15 +244,14 @@ impl SessionBootstrap {
             cohort: single_hop.cohort,
             members: Vec::new(),
             exits: single_hop.exit_set,
-            // TODO(R-REGION.3): once the coordinator's
-            // `MatchResponse` carries per-exit region tags, populate
-            // `exit_regions` from the response here so the client's
+            // R-REGION.3: coord-side `SingleHopMatch` now carries the
+            // per-exit region map; copy it verbatim so the client's
             // region-aware exit pick (F-CLI.4b) has real data to
-            // filter on. Until that lands the map stays empty and
-            // any `pick_exit(..., Some(r))` refuses — which matches
-            // the §11 R-3 "no exit in requested_region; defer to
-            // retry / fallback to multi-hop" semantics.
-            exit_regions: std::collections::HashMap::new(),
+            // filter on. An empty map (older coord / no GeoIP DB
+            // configured) collapses every `pick_exit(.., Some(r), ..)`
+            // to the §11 R-3 refusal path — same as the pre-R-REGION.3
+            // behaviour.
+            exit_regions: single_hop.exit_regions,
             at: Timestamp::now(),
         };
         Ok(BootstrappedSession {

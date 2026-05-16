@@ -83,6 +83,11 @@ struct MockState {
     cohort: CohortId,
     /// Exit set the match handler returns.
     exit_set: Vec<NodeId>,
+    /// Per-exit region tags the match handler stamps on
+    /// [`SingleHopMatch::exit_regions`]. Empty for the F-CLI.4
+    /// happy-path test that does not exercise the F-CLI.4b filter;
+    /// populated for the F-CLI.4b end-to-end test below.
+    exit_regions: std::collections::HashMap<NodeId, String>,
 }
 
 async fn register_handler(
@@ -135,6 +140,7 @@ async fn match_handler(
     Ok(Json(MatchResponse::SingleHop(SingleHopMatch {
         cohort: state.cohort,
         exit_set: state.exit_set,
+        exit_regions: state.exit_regions,
         rotation_deadline: Timestamp::from_offset_date_time(deadline),
     })))
 }
@@ -218,6 +224,7 @@ async fn bootstrap_happy_path_register_and_match() {
         expected_peer,
         cohort,
         exit_set: exit_set.clone(),
+        exit_regions: std::collections::HashMap::new(),
     };
     let (addr, shutdown_tx, tls) = spawn_mock_coordinator(state).await;
     let base =
@@ -250,12 +257,78 @@ async fn bootstrap_happy_path_register_and_match() {
     assert_eq!(session.cohort_live.exits, exit_set);
     assert!(session.cohort_live.members.is_empty(), "bootstrap returns partial live");
     assert!(
+        session.cohort_live.exit_regions.is_empty(),
+        "unfiltered happy-path test should not populate exit_regions",
+    );
+    assert!(
         session.session_token.starts_with("v4.public."),
         "session token must be PASETO v4 public",
     );
 
     // Shut down the mock cleanly so the test process does not leak
     // the listener task.
+    let _ignored = shutdown_tx.send(());
+}
+
+/// R-REGION.3 + F-CLI.4b end-to-end: the coord-emitted
+/// `SingleHopMatch.exit_regions` map propagates through
+/// `bootstrap()` into `CohortLive.exit_regions`, where the client's
+/// region-aware exit picker can filter by it. Before the
+/// `SingleHopMatch` field was added this map was empty regardless
+/// of operator config — `pick_exit(.., Some(r), ..)` then refused
+/// every call (the §11 R-3 deferral path). This test pins the
+/// happy production-path data flow: coord emits → bootstrap copies
+/// → client filter sees real region tags.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn bootstrap_propagates_exit_regions_into_cohort_live() {
+    ensure_crypto_provider();
+    let fixture = Fixture::fresh();
+    let expected_peer = PeerId::new();
+    let cohort = CohortId::new();
+    let exit_set = vec![NodeId::new(), NodeId::new(), NodeId::new()];
+    let mut exit_regions = std::collections::HashMap::new();
+    exit_regions.insert(exit_set[0], "us-east".to_owned());
+    exit_regions.insert(exit_set[1], "eu-de".to_owned());
+    exit_regions.insert(exit_set[2], "us-east".to_owned());
+
+    let state = MockState {
+        issuer: Arc::new(fixture.issuer),
+        expected_peer,
+        cohort,
+        exit_set: exit_set.clone(),
+        exit_regions: exit_regions.clone(),
+    };
+    let (addr, shutdown_tx, tls) = spawn_mock_coordinator(state).await;
+    let base =
+        Url::parse(&format!("https://localhost:{port}/", port = addr.port())).expect("base url");
+
+    let client = CoordinatorClient::new(base, Arc::clone(&tls)).expect("client");
+    let pool = Arc::new(CoordinatorPool::new(vec![client]).expect("pool"));
+
+    let coord_pubkey = fixture.identity_secret.public();
+    let bootstrap = SessionBootstrap::new(Arc::clone(&pool), coord_pubkey.clone());
+
+    let signed_invite = build_signed_invite(&fixture.identity_secret);
+    let my_addr_hint: SocketAddr = "127.0.0.1:41443".parse().expect("addr hint");
+
+    let profile = PeerProfile {
+        peer_id: expected_peer,
+        addr_hint: my_addr_hint,
+        can_exit: true,
+        capacity_hint: 42,
+    };
+    let session = bootstrap
+        .bootstrap(&signed_invite, profile, &fixture.verifier)
+        .await
+        .expect("bootstrap must succeed");
+
+    assert_eq!(session.cohort_live.exits, exit_set);
+    assert_eq!(
+        session.cohort_live.exit_regions, exit_regions,
+        "coord-emitted exit_regions must flow into CohortLive verbatim — \
+         this is the contract gap F-CLI.4b left open and R-REGION.3 closes",
+    );
+
     let _ignored = shutdown_tx.send(());
 }
 

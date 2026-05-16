@@ -68,13 +68,38 @@
 //! list (admission and drain alike) and never across an `await`.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use bibeam_core::{CohortId, PeerId, Timestamp};
+use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use bibeam_protocol::control::{MatchResponse, SingleHopMatch};
 use parking_lot::Mutex;
 
 use super::audit::AuditLog;
 use super::cohorts::CohortRecord;
+
+/// Callable resolving a cohort exit's [`NodeId`] to a region string.
+///
+/// Sourced at the coord from
+/// [`bibeam_discovery::ExitRecord::region`] (or
+/// [`bibeam_discovery::PeerRecord::region`] for relay-promoted exits)
+/// per R-REGION.3. `None` means "region unknown for that exit"; the
+/// caller's region-aware exit picker (F-CLI.4b) treats that as a
+/// non-match, not a wildcard.
+///
+/// Passed to [`AdmissionGate::admit_or_bucket`] +
+/// [`AdmissionGate::drain_ready`] so each emitted [`MatchResponse`]
+/// carries the per-exit region map straight through to the client's
+/// `CohortLive` view — closing the silent contract gap F-CLI.4b
+/// left in place at commit 155a0f1.
+pub type ExitRegionLookup<'a> = &'a (dyn Fn(NodeId) -> Option<String> + Send + Sync);
+
+/// [`Arc`]-shared variant of [`ExitRegionLookup`].
+///
+/// For owners that keep the lookup state across `tokio` task
+/// boundaries (e.g. [`super::rotation::RotationScheduler`]).
+/// Deref-coerces to [`ExitRegionLookup`] at the gate-call site via
+/// `&*lookup`.
+pub type SharedExitRegionLookup = Arc<dyn Fn(NodeId) -> Option<String> + Send + Sync>;
 
 /// Outcome of a single [`AdmissionGate::admit_or_bucket`] call.
 ///
@@ -189,12 +214,27 @@ impl AdmissionGate {
     /// The `region` argument must match the registrant's declared
     /// [`bibeam_discovery::PeerRecord::region`]; the gate keys its
     /// pending bucket on this string verbatim.
+    ///
+    /// `exit_region_lookup` resolves each cohort exit's [`NodeId`]
+    /// to its operator-tagged region string for the emitted
+    /// [`MatchResponse`]; see [`ExitRegionLookup`] for the contract.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "R-REGION.3 widened the gate's admit entry point with the \
+                  exit_region_lookup callback; the other five arguments are \
+                  the pre-existing F-COORD.5 contract surface (peer_id, \
+                  cohort_id, region, &mut cohort, &self). Bundling them \
+                  into a struct only shifts the same six fields onto a \
+                  literal at every call site and obscures the trailing \
+                  lookup pointer the rotation scheduler threads in by Arc."
+    )]
     pub fn admit_or_bucket(
         &self,
         peer_id: PeerId,
         cohort_id: CohortId,
         region: &str,
         cohort: &mut CohortRecord,
+        exit_region_lookup: ExitRegionLookup<'_>,
     ) -> AdmissionOutcome {
         // R-3 cross-region safety: a cohort already tagged with a
         // different region must NOT accept the new peer. Refusal
@@ -217,7 +257,11 @@ impl AdmissionGate {
         }
         let live_count = u32::try_from(cohort.members.len()).unwrap_or(u32::MAX);
         if live_count >= self.floor {
-            return AdmissionOutcome::Admitted(Box::new(build_response(cohort_id, cohort)));
+            return AdmissionOutcome::Admitted(Box::new(build_response(
+                cohort_id,
+                cohort,
+                exit_region_lookup,
+            )));
         }
         let (response_tx, response_rx) = tokio::sync::oneshot::channel();
         let pending_entry = PendingAdmission {
@@ -275,24 +319,39 @@ impl AdmissionGate {
     /// rotation scheduler always passes `Some(&log)` in production
     /// callsites.
     ///
+    /// `exit_region_lookup` resolves each cohort exit's [`NodeId`]
+    /// to its operator-tagged region string for the emitted
+    /// [`MatchResponse`]; see [`ExitRegionLookup`] for the contract.
+    ///
     /// The matchmaker calls this after every successful admission
     /// plus persistence so a peer that flipped a cohort over the
     /// floor releases every other peer it brought along for the
     /// same `(region, cohort_id)` pair. Waiters bucketed under a
     /// different `cohort_id` or a different region are untouched.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "R-REGION.3 widened the drain entry point with the \
+                  exit_region_lookup callback; the other five arguments are \
+                  the pre-existing F-COORD.5 + F-COORD.8 contract surface \
+                  (region, cohort_id, &cohort, audit_log, &self). Bundling \
+                  them into a struct only shifts the same six fields onto \
+                  a literal at every call site and obscures the trailing \
+                  lookup pointer the rotation scheduler threads in by Arc."
+    )]
     pub fn drain_ready(
         &self,
         region: &str,
         cohort_id: CohortId,
         cohort: &CohortRecord,
         audit_log: Option<&AuditLog>,
+        exit_region_lookup: ExitRegionLookup<'_>,
     ) -> usize {
         let live_count = u32::try_from(cohort.members.len()).unwrap_or(u32::MAX);
         if live_count < self.floor {
             self.emit_no_anonymous_path_if_pending(region, audit_log);
             return 0;
         }
-        let response = build_response(cohort_id, cohort);
+        let response = build_response(cohort_id, cohort, exit_region_lookup);
         let drained = self.partition_waiters_for(region, cohort_id, cohort);
         let released = drained.len();
         for waiter in drained {
@@ -514,10 +573,31 @@ fn extend_pairs_from_bucket(
 /// Phase 1's admission gate only emits the single-hop branch
 /// ([`MatchResponse::SingleHop`]); multi-hop assignments arrive in
 /// R-MULTIHOP-COORD when the coordinator-side path assembly lands.
-fn build_response(cohort_id: CohortId, cohort: &CohortRecord) -> MatchResponse {
+///
+/// `exit_region_lookup` resolves each exit [`NodeId`] to its
+/// operator-tagged region string at admit / drain time, populating the
+/// per-exit [`SingleHopMatch::exit_regions`] map. Exits with no entry
+/// in the lookup do not appear in the emitted map; the client's
+/// `pick_exit(..., Some(region), ..)` treats those as non-matches per
+/// F-CLI.4b. When the caller has no lookup (in-module tests, MVP
+/// boot-time stub), pass a closure that always returns `None` — the
+/// emitted map will be empty and the client falls back to the
+/// "region-unknown" pick path.
+fn build_response(
+    cohort_id: CohortId,
+    cohort: &CohortRecord,
+    exit_region_lookup: ExitRegionLookup<'_>,
+) -> MatchResponse {
+    let mut exit_regions: HashMap<NodeId, String> = HashMap::with_capacity(cohort.exits.len());
+    for exit in &cohort.exits {
+        if let Some(region) = exit_region_lookup(*exit) {
+            exit_regions.insert(*exit, region);
+        }
+    }
     MatchResponse::SingleHop(SingleHopMatch {
         cohort: cohort_id,
         exit_set: cohort.exits.clone(),
+        exit_regions,
         rotation_deadline: cohort.rotation_deadline,
     })
 }
@@ -542,6 +622,13 @@ mod tests {
         }
     }
 
+    /// Test stub: every exit's region is unknown. Mirrors the
+    /// MVP boot-time default and exercises the empty-map branch on
+    /// the emitted `MatchResponse.exit_regions`.
+    fn no_region_lookup() -> ExitRegionLookup<'static> {
+        &|_| None
+    }
+
     fn audit_log_with_temp() -> (AuditLog, tempfile::NamedTempFile) {
         let temp = tempfile::NamedTempFile::new().expect("tempfile");
         let key = Arc::new(RedactionKey::from_bytes([0x42; 32]));
@@ -560,12 +647,18 @@ mod tests {
         let mut cohort = cohort_with(pre_existing);
         let cohort_id = CohortId::new();
         let peer = PeerId::new();
-        let outcome = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort);
+        let outcome =
+            gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort, no_region_lookup());
         match outcome {
             AdmissionOutcome::Admitted(response) => match *response {
                 MatchResponse::SingleHop(single_hop) => {
                     assert_eq!(single_hop.cohort, cohort_id);
                     assert_eq!(single_hop.exit_set, cohort.exits);
+                    assert!(
+                        single_hop.exit_regions.is_empty(),
+                        "no-region lookup must emit empty exit_regions, got {:?}",
+                        single_hop.exit_regions,
+                    );
                 },
                 MatchResponse::MultiHopAssignment(_) => {
                     panic!("admission gate must emit single-hop only at this phase")
@@ -596,7 +689,8 @@ mod tests {
         let region = "us-east";
 
         let first = PeerId::new();
-        let outcome_first = gate.admit_or_bucket(first, cohort_id, region, &mut cohort);
+        let outcome_first =
+            gate.admit_or_bucket(first, cohort_id, region, &mut cohort, no_region_lookup());
         let mut receiver_first = match outcome_first {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             AdmissionOutcome::Admitted(_) => panic!("first peer must bucket"),
@@ -606,7 +700,8 @@ mod tests {
         };
 
         let second = PeerId::new();
-        let outcome_second = gate.admit_or_bucket(second, cohort_id, region, &mut cohort);
+        let outcome_second =
+            gate.admit_or_bucket(second, cohort_id, region, &mut cohort, no_region_lookup());
         let mut receiver_second = match outcome_second {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             AdmissionOutcome::Admitted(_) => panic!("second peer must bucket"),
@@ -617,9 +712,10 @@ mod tests {
 
         // Third peer pushes the cohort to 3 — at the floor.
         let third = PeerId::new();
-        let outcome_third = gate.admit_or_bucket(third, cohort_id, region, &mut cohort);
+        let outcome_third =
+            gate.admit_or_bucket(third, cohort_id, region, &mut cohort, no_region_lookup());
         assert!(matches!(outcome_third, AdmissionOutcome::Admitted(_)));
-        let released = gate.drain_ready(region, cohort_id, &cohort, None);
+        let released = gate.drain_ready(region, cohort_id, &cohort, None, no_region_lookup());
         assert_eq!(released, 2);
         assert_eq!(gate.pending_count(), 0);
         assert_eq!(cohort.region, region);
@@ -647,10 +743,21 @@ mod tests {
         let gate = AdmissionGate::new(5);
         let cohort_id = CohortId::new();
         let mut cohort = cohort_with(Vec::new());
-        let _outcome = gate.admit_or_bucket(PeerId::new(), cohort_id, "us-east", &mut cohort);
-        let _outcome_second =
-            gate.admit_or_bucket(PeerId::new(), cohort_id, "us-east", &mut cohort);
-        let released = gate.drain_ready("us-east", cohort_id, &cohort, None);
+        let _outcome = gate.admit_or_bucket(
+            PeerId::new(),
+            cohort_id,
+            "us-east",
+            &mut cohort,
+            no_region_lookup(),
+        );
+        let _outcome_second = gate.admit_or_bucket(
+            PeerId::new(),
+            cohort_id,
+            "us-east",
+            &mut cohort,
+            no_region_lookup(),
+        );
+        let released = gate.drain_ready("us-east", cohort_id, &cohort, None, no_region_lookup());
         assert_eq!(released, 0);
         assert_eq!(gate.pending_count(), 2);
     }
@@ -665,7 +772,8 @@ mod tests {
         let cohort_id = CohortId::new();
         let peer = PeerId::new();
         let mut cohort = cohort_with(vec![peer]);
-        let _outcome = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort);
+        let _outcome =
+            gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort, no_region_lookup());
         assert_eq!(cohort.members.len(), 1);
     }
 
@@ -684,7 +792,13 @@ mod tests {
         let shared_peer = PeerId::new();
         // Bucket `shared_peer` under the old cohort; the old
         // cohort stays sub-floor so the waiter is genuinely parked.
-        let outcome = gate.admit_or_bucket(shared_peer, cohort_old, "us-east", &mut old_record);
+        let outcome = gate.admit_or_bucket(
+            shared_peer,
+            cohort_old,
+            "us-east",
+            &mut old_record,
+            no_region_lookup(),
+        );
         let mut receiver = match outcome {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             AdmissionOutcome::Admitted(_) => panic!("must bucket"),
@@ -709,7 +823,8 @@ mod tests {
             ),
             region: "us-east".to_owned(),
         };
-        let released = gate.drain_ready("us-east", cohort_new, &new_record, None);
+        let released =
+            gate.drain_ready("us-east", cohort_new, &new_record, None, no_region_lookup());
         assert_eq!(released, 0, "old-cohort waiter must not be released");
         assert_eq!(gate.pending_count(), 1, "old-cohort waiter must remain");
         // Old waiter still genuinely pending (Empty, not Closed) —
@@ -737,13 +852,15 @@ mod tests {
 
         // First admission stamps the cohort with `eu-de`.
         let first = PeerId::new();
-        let outcome_first = gate.admit_or_bucket(first, cohort_id, "eu-de", &mut cohort);
+        let outcome_first =
+            gate.admit_or_bucket(first, cohort_id, "eu-de", &mut cohort, no_region_lookup());
         assert!(matches!(outcome_first, AdmissionOutcome::Bucketed(_)));
         assert_eq!(cohort.region, "eu-de");
 
         // Second admission with a different region must refuse.
         let second = PeerId::new();
-        let outcome_second = gate.admit_or_bucket(second, cohort_id, "us-east", &mut cohort);
+        let outcome_second =
+            gate.admit_or_bucket(second, cohort_id, "us-east", &mut cohort, no_region_lookup());
         match outcome_second {
             AdmissionOutcome::RegionMismatch {
                 existing_region,
@@ -775,7 +892,8 @@ mod tests {
         let mut cohort = cohort_with(Vec::new());
         let peer = PeerId::new();
 
-        let outcome_first = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort);
+        let outcome_first =
+            gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort, no_region_lookup());
         let mut receiver_first = match outcome_first {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             other => panic!("first admit must bucket, got {other:?}"),
@@ -784,7 +902,8 @@ mod tests {
 
         // Same peer, same cohort, same region — simulates a retry
         // after HTTP timeout.
-        let outcome_second = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort);
+        let outcome_second =
+            gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort, no_region_lookup());
         let mut receiver_second = match outcome_second {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             other => panic!("retry admit must bucket, got {other:?}"),
@@ -821,7 +940,8 @@ mod tests {
     ) -> Vec<tokio::sync::oneshot::Receiver<MatchResponse>> {
         let mut receivers: Vec<tokio::sync::oneshot::Receiver<MatchResponse>> = Vec::new();
         for _index in 0..count {
-            let outcome = gate.admit_or_bucket(PeerId::new(), cohort_id, region, cohort);
+            let outcome =
+                gate.admit_or_bucket(PeerId::new(), cohort_id, region, cohort, no_region_lookup());
             match outcome {
                 AdmissionOutcome::Bucketed(receiver) => receivers.push(receiver),
                 AdmissionOutcome::Admitted(_) => {
@@ -859,7 +979,8 @@ mod tests {
         let mut receivers: Vec<tokio::sync::oneshot::Receiver<MatchResponse>> = Vec::new();
         let pre_floor = floor.saturating_sub(1);
         for index in 0..count {
-            let outcome = gate.admit_or_bucket(PeerId::new(), cohort_id, region, cohort);
+            let outcome =
+                gate.admit_or_bucket(PeerId::new(), cohort_id, region, cohort, no_region_lookup());
             match outcome {
                 AdmissionOutcome::RegionMismatch { .. } => {
                     panic!("{region} must not mismatch on {region} admits")
@@ -925,8 +1046,13 @@ mod tests {
             admit_to_floor_crossing(&gate, "eu-de", eu_de_cohort_id, &mut eu_de_cohort, 35, FLOOR);
 
         // Drain eu-de — every bucketed waiter resolves.
-        let eu_de_released =
-            gate.drain_ready("eu-de", eu_de_cohort_id, &eu_de_cohort, Some(&audit));
+        let eu_de_released = gate.drain_ready(
+            "eu-de",
+            eu_de_cohort_id,
+            &eu_de_cohort,
+            Some(&audit),
+            no_region_lookup(),
+        );
         assert_eq!(eu_de_released, 29);
         for mut receiver in eu_de_receivers {
             let response = receiver.try_recv().expect("eu-de waiter resolves");
@@ -937,8 +1063,13 @@ mod tests {
         }
 
         // Drain us-east — none release; one refusal emitted.
-        let us_east_released =
-            gate.drain_ready("us-east", us_east_cohort_id, &us_east_cohort, Some(&audit));
+        let us_east_released = gate.drain_ready(
+            "us-east",
+            us_east_cohort_id,
+            &us_east_cohort,
+            Some(&audit),
+            no_region_lookup(),
+        );
         assert_eq!(us_east_released, 0);
         assert_eq!(
             gate.pending_count_for_region("us-east"),
@@ -984,7 +1115,13 @@ mod tests {
         let mut cohort = cohort_with(Vec::new());
         // Park 5 peers in us-east — under-floor, non-empty.
         for _index in 0..5 {
-            let outcome = gate.admit_or_bucket(PeerId::new(), cohort_id, "us-east", &mut cohort);
+            let outcome = gate.admit_or_bucket(
+                PeerId::new(),
+                cohort_id,
+                "us-east",
+                &mut cohort,
+                no_region_lookup(),
+            );
             assert!(
                 matches!(outcome, AdmissionOutcome::Bucketed(_)),
                 "us-east must bucket below floor",
@@ -994,7 +1131,8 @@ mod tests {
         // Poll the gate three times. Each poll must emit one
         // refusal entry.
         for _poll in 0..3 {
-            let released = gate.drain_ready("us-east", cohort_id, &cohort, Some(&audit));
+            let released =
+                gate.drain_ready("us-east", cohort_id, &cohort, Some(&audit), no_region_lookup());
             assert_eq!(released, 0);
         }
 
@@ -1023,7 +1161,8 @@ mod tests {
         let cohort_id = CohortId::new();
         let cohort = cohort_with(Vec::new());
 
-        let released = gate.drain_ready("us-east", cohort_id, &cohort, Some(&audit));
+        let released =
+            gate.drain_ready("us-east", cohort_id, &cohort, Some(&audit), no_region_lookup());
         assert_eq!(released, 0);
 
         let rows = audit.snapshot().expect("snapshot");

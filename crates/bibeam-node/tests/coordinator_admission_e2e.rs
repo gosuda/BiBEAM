@@ -117,11 +117,18 @@ async fn admission_pipeline_round_trips_token_at_floor() {
     // region so the gate's R-FLOOR partitioning collapses to one
     // bucket — matches pre-R-FLOOR behavior.
     let region = "us-east";
+    let exit_region_lookup: &(dyn Fn(NodeId) -> Option<String> + Send + Sync) = &|_| None;
     let mut bucketed_receivers: Vec<tokio::sync::oneshot::Receiver<_>> =
         Vec::with_capacity(all_peers.len());
     let mut explicit_first_admitted = false;
     for (index, peer_id) in all_peers.iter().enumerate() {
-        let outcome = gate.admit_or_bucket(*peer_id, cohort_id, region, &mut cohort_record);
+        let outcome = gate.admit_or_bucket(
+            *peer_id,
+            cohort_id,
+            region,
+            &mut cohort_record,
+            exit_region_lookup,
+        );
         let one_indexed = index + 1;
         match outcome {
             AdmissionOutcome::Admitted(response) => match *response {
@@ -153,7 +160,7 @@ async fn admission_pipeline_round_trips_token_at_floor() {
     // Drain the bucketed waiters — every one of them should
     // receive a MatchResponse now that the cohort meets the
     // floor.
-    let released = gate.drain_ready(region, cohort_id, &cohort_record, None);
+    let released = gate.drain_ready(region, cohort_id, &cohort_record, None, exit_region_lookup);
     assert_eq!(released, bucketed_receivers.len());
     for mut receiver in bucketed_receivers {
         let response = receiver.try_recv().expect("waiter resolved");

@@ -30,7 +30,7 @@ use bibeam_core::Timestamp;
 use tokio::time::{Instant, interval_at};
 use tokio_util::sync::CancellationToken;
 
-use super::admission_gate::AdmissionGate;
+use super::admission_gate::{AdmissionGate, SharedExitRegionLookup};
 use super::audit::AuditLog;
 use super::cohorts::{CohortStore, CohortStoreError};
 use super::registry::{PeerRegistry, RegistryError};
@@ -69,32 +69,54 @@ pub enum RotationError {
 /// through this handle. The scheduler accepts the audit log as
 /// `Option<Arc<AuditLog>>` so an integration test that does not
 /// want to spin up a tempfile-backed redb log can pass [`None`].
-#[derive(Debug)]
 pub struct RotationScheduler {
     registry: Arc<PeerRegistry>,
     cohorts: Arc<CohortStore>,
     gate: Arc<AdmissionGate>,
     audit_log: Option<Arc<AuditLog>>,
+    exit_region_lookup: SharedExitRegionLookup,
     interval: Duration,
     heartbeat_slo: Duration,
+}
+
+impl core::fmt::Debug for RotationScheduler {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // Manual impl: `dyn Fn(...)` lookup closures are not `Debug`.
+        formatter
+            .debug_struct("RotationScheduler")
+            .field("registry", &self.registry)
+            .field("cohorts", &self.cohorts)
+            .field("gate", &self.gate)
+            .field("audit_log", &self.audit_log)
+            .field("interval", &self.interval)
+            .field("heartbeat_slo", &self.heartbeat_slo)
+            .finish_non_exhaustive()
+    }
 }
 
 impl RotationScheduler {
     /// Construct a scheduler with the default cadence
     /// ([`ROTATION_INTERVAL`]) and heartbeat SLO
     /// ([`PEER_HEARTBEAT_SLO`]).
+    ///
+    /// `exit_region_lookup` is the [`SharedExitRegionLookup`] each
+    /// gate drain threads through [`AdmissionGate::drain_ready`] so
+    /// emitted [`bibeam_protocol::control::MatchResponse`]s carry
+    /// per-exit region tags (R-REGION.3).
     #[must_use]
     pub fn new(
         registry: Arc<PeerRegistry>,
         cohorts: Arc<CohortStore>,
         gate: Arc<AdmissionGate>,
         audit_log: Option<Arc<AuditLog>>,
+        exit_region_lookup: SharedExitRegionLookup,
     ) -> Self {
         Self::with_cadence(
             registry,
             cohorts,
             gate,
             audit_log,
+            exit_region_lookup,
             ROTATION_INTERVAL,
             PEER_HEARTBEAT_SLO,
         )
@@ -125,6 +147,7 @@ impl RotationScheduler {
         cohorts: Arc<CohortStore>,
         gate: Arc<AdmissionGate>,
         audit_log: Option<Arc<AuditLog>>,
+        exit_region_lookup: SharedExitRegionLookup,
         interval: Duration,
         heartbeat_slo: Duration,
     ) -> Self {
@@ -133,6 +156,7 @@ impl RotationScheduler {
             cohorts,
             gate,
             audit_log,
+            exit_region_lookup,
             interval,
             heartbeat_slo,
         }
@@ -248,6 +272,8 @@ impl RotationScheduler {
             Vec::with_capacity(pending_buckets.len());
         let mut released_total: usize = 0;
         let audit_ref: Option<&AuditLog> = self.audit_log.as_deref();
+        let lookup_ref: &(dyn Fn(bibeam_core::NodeId) -> Option<String> + Send + Sync) =
+            &*self.exit_region_lookup;
         for (region, cohort_id) in pending_buckets {
             let Some(record) = self.cohorts.get(&cohort_id)? else {
                 continue;
@@ -255,8 +281,9 @@ impl RotationScheduler {
             if !live_cohort_ids.contains(&cohort_id) {
                 live_cohort_ids.push(cohort_id);
             }
-            released_total = released_total
-                .saturating_add(self.gate.drain_ready(&region, cohort_id, &record, audit_ref));
+            released_total = released_total.saturating_add(
+                self.gate.drain_ready(&region, cohort_id, &record, audit_ref, lookup_ref),
+            );
         }
         let cancelled = self.gate.cancel_orphans(&live_cohort_ids);
         Ok((released_total, cancelled))
@@ -296,6 +323,13 @@ mod tests {
 
     use crate::coordinator::admission_gate::AdmissionOutcome;
     use crate::coordinator::cohorts::CohortRecord;
+
+    /// Test stub: every exit's region is unknown. Mirrors the
+    /// MVP boot-time default until the discovery-plane-backed
+    /// lookup is wired into the daemon.
+    fn no_region_lookup() -> SharedExitRegionLookup {
+        Arc::new(|_| None)
+    }
 
     fn fixture_registry() -> (Arc<PeerRegistry>, tempfile::NamedTempFile) {
         let temp = tempfile::NamedTempFile::new().expect("registry tempfile");
@@ -343,6 +377,7 @@ mod tests {
             cohorts.clone(),
             gate,
             None,
+            no_region_lookup(),
             Duration::from_secs(60),
             Duration::from_secs(60),
         );
@@ -385,6 +420,7 @@ mod tests {
             cohorts.clone(),
             gate.clone(),
             None,
+            no_region_lookup(),
             Duration::from_secs(60),
             Duration::from_secs(60),
         );
@@ -400,7 +436,9 @@ mod tests {
 
         let peer = PeerId::new();
         let mut mutable_record = fixture_cohort(expired_deadline);
-        let outcome = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut mutable_record);
+        let lookup = no_region_lookup();
+        let outcome =
+            gate.admit_or_bucket(peer, cohort_id, "us-east", &mut mutable_record, &*lookup);
         let mut receiver = match outcome {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             AdmissionOutcome::Admitted(_) => panic!("must bucket below floor of 30"),
@@ -433,6 +471,7 @@ mod tests {
             cohorts,
             gate,
             None,
+            no_region_lookup(),
             Duration::from_secs(60),
             Duration::from_secs(120),
         );

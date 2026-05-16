@@ -94,6 +94,31 @@ pub enum AuditKind {
         /// region's bucket at the moment of refusal.
         pending_count: u32,
     },
+    /// R-REGION.3: the coord's `GeoIP` cross-check observed a
+    /// country code that does not match the registrant's declared
+    /// `region`. Per D-5 the response is warn-only at MVP — this
+    /// row is recorded and admission proceeds anyway. The payload
+    /// rides on the variant (mirrors the
+    /// [`Self::NoAnonymousPathAvailable`] precedent) so operator
+    /// dashboards can pattern-match on the classifier directly
+    /// without re-parsing `detail_json`.
+    ///
+    /// Only the country codes are captured — the raw observed IP
+    /// never reaches this row. F-COORD.10's PII redaction hooks
+    /// already key the per-row `ip_token` separately; folding the
+    /// raw IP into the variant would create a parallel source of
+    /// truth and break the redaction contract.
+    RegionMismatch {
+        /// Region the registrant declared on its
+        /// [`bibeam_discovery::PeerRecord::region`] /
+        /// [`bibeam_discovery::ExitRecord::region`] /
+        /// [`bibeam_discovery::RelayRecord::region`] field.
+        declared: String,
+        /// ISO-3166-alpha2 country code (lowercased — see
+        /// [`super::geoip_verify::GeoipReader::country_code`])
+        /// the `GeoIP` DB returned for the observed source IP.
+        observed: String,
+    },
 }
 
 /// One row in the operator audit log.
@@ -291,6 +316,42 @@ impl AuditLog {
             },
             peer_token: None,
             ip_token: None,
+            detail_json: String::new(),
+        })
+    }
+
+    /// Record an R-REGION.3 region-mismatch: the coord's `GeoIP`
+    /// cross-check observed a country code that does not match the
+    /// registrant's declared region. Per D-5 admission proceeds at
+    /// MVP — the row is the operator's record of the mismatch, not
+    /// a refusal.
+    ///
+    /// `peer_id` + `source_ip` route through the redaction helpers so
+    /// the row carries only the operator-derived `peer_token` /
+    /// `ip_token`. The declared and observed country codes ride on
+    /// the [`AuditKind::RegionMismatch`] variant; `detail_json` is
+    /// left empty so the variant remains the single source of truth
+    /// for the payload (mirrors the
+    /// [`Self::record_no_anonymous_path`] precedent).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`AuditLog::append`].
+    pub fn record_region_mismatch(
+        &self,
+        peer_id: &PeerId,
+        source_ip: IpAddr,
+        declared: &str,
+        observed: &str,
+    ) -> Result<(), AuditError> {
+        self.append(&AuditEntry {
+            at: Timestamp::now(),
+            kind: AuditKind::RegionMismatch {
+                declared: declared.to_owned(),
+                observed: observed.to_owned(),
+            },
+            peer_token: Some(redact_peer_id(&self.redaction_key, peer_id)),
+            ip_token: Some(redact_ip(&self.redaction_key, source_ip)),
             detail_json: String::new(),
         })
     }

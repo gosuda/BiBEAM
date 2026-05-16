@@ -50,7 +50,8 @@ parking_lot = { workspace = true }
 dashmap = { workspace = true }
 # --- GeoIP cross-check (R-REGION.2 / D-5): operator-supplied GeoLite2-Country DB ---
 maxminddb = { workspace = true }
-# --- multi-hop path-assembly (R-MULTIHOP-COORD) — WgPeerConfig.allowed_ips uses IpNet ---
+# --- multi-hop path-assembly (R-MULTIHOP-COORD) — WgPeerConfig.allowed_ips uses IpNet;
+# also consumed by R-REGION.3 for mismatch_allowlist_cidrs parsing. ---
 ipnet = { workspace = true }
 # --- R-MULTIHOP-NODE forwarder mode: per-pair routing table metrics + frame bytes ---
 metrics = { workspace = true }

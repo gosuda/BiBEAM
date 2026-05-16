@@ -371,9 +371,16 @@ fn pick_busy_forwarder<View: RegionView + ?Sized>(
 /// expects a list-shaped exit set even when the busy-region
 /// branch only nominated one).
 fn build_single_hop(exit: &ExitCandidate) -> SingleHopMatch {
+    // R-REGION.3: the multihop fallback's single-hop shortcut does
+    // not know each exit's region tag at this layer (the candidate
+    // type only carries `node_id` + capacity). Ship an empty
+    // `exit_regions` map so the client's region-aware exit picker
+    // (F-CLI.4b) treats every exit as region-unknown — the §11 R-3
+    // "no exit in <region>; defer / fallback to multi-hop" path.
     SingleHopMatch {
         cohort: bibeam_core::CohortId::new(),
         exit_set: vec![exit.node_id],
+        exit_regions: HashMap::new(),
         rotation_deadline: rotation_deadline_now(),
     }
 }

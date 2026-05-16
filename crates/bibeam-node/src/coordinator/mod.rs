@@ -23,6 +23,7 @@ pub mod invite_admission;
 pub mod log_hooks;
 pub mod multihop;
 pub mod rate_limit;
+pub mod region_verify;
 pub mod registry;
 pub mod rotation;
 pub mod server;

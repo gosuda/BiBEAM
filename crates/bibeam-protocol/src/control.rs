@@ -17,6 +17,7 @@
 //! All timestamps use [`Timestamp`], which round-trips through RFC 3339
 //! on the wire (see `bibeam_core::time`).
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
@@ -89,6 +90,22 @@ pub struct SingleHopMatch {
     pub cohort: CohortId,
     /// Exit nodes serving traffic for `cohort`.
     pub exit_set: Vec<NodeId>,
+    /// Per-exit operator-tagged region tag, indexed by [`NodeId`] from
+    /// [`Self::exit_set`]. Same free-form string shape as
+    /// [`bibeam_core::Timestamp`]-companion `bibeam_discovery::ExitRecord::region`
+    /// (R-REGION.1). The coordinator copies the tag verbatim from the
+    /// discovery record at admission / drain time (R-REGION.3). Missing
+    /// entries mean "region unknown for that exit"; the client's
+    /// region-aware exit picker (F-CLI.4b) MUST treat a missing tag as
+    /// a non-match, never as a wildcard.
+    ///
+    /// Defaults to an empty map for backward-compat: a coord that has
+    /// not been upgraded ships an empty map, and the client's
+    /// `pick_exit(.., Some(region), ..)` then refuses with `None` —
+    /// matching the §11 R-3 "no exit in `<region>`; defer / fallback to
+    /// multi-hop" semantics.
+    #[serde(default)]
+    pub exit_regions: HashMap<NodeId, String>,
     /// Wall-clock instant at which the peer must rotate.
     pub rotation_deadline: Timestamp,
 }

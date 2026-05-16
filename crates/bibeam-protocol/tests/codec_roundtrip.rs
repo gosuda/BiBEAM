@@ -96,13 +96,36 @@ fn arb_match_request() -> impl Strategy<Value = MatchRequest> {
 }
 
 fn arb_single_hop_match() -> impl Strategy<Value = SingleHopMatch> {
-    (arb_cohort_id(), vec(arb_node_id(), 0..8), arb_timestamp()).prop_map(
-        |(cohort, exit_set, rotation_deadline)| SingleHopMatch {
-            cohort,
-            exit_set,
-            rotation_deadline,
-        },
+    // `exit_regions` is sampled as a subset of `exit_set` keyed by
+    // node id so the codec round-trip exercises a populated map (the
+    // shape coord emits at R-REGION.3) without testing coordinator
+    // semantics. Region strings are short ASCII slugs — same shape
+    // operators tag with, but the test doesn't care about the value
+    // beyond byte-for-byte equality across the serde boundary.
+    (
+        arb_cohort_id(),
+        vec(arb_node_id(), 0..8),
+        vec("[a-z]{2}-[a-z]{2,8}", 0..4),
+        arb_timestamp(),
     )
+        .prop_map(|(cohort, exit_set, region_pool, rotation_deadline)| {
+            let mut exit_regions = std::collections::HashMap::new();
+            for (idx, node) in exit_set.iter().enumerate() {
+                if region_pool.is_empty() {
+                    break;
+                }
+                if idx % 2 == 0 {
+                    let region = region_pool[idx % region_pool.len()].clone();
+                    exit_regions.insert(*node, region);
+                }
+            }
+            SingleHopMatch {
+                cohort,
+                exit_set,
+                exit_regions,
+                rotation_deadline,
+            }
+        })
 }
 
 fn arb_wg_public_key() -> impl Strategy<Value = WgPublicKey> {
