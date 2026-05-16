@@ -273,6 +273,8 @@ mod tests {
             can_exit: false,
             capacity_hint: 0,
             last_seen,
+            region: String::new(),
+            region_last_verified_at: Timestamp::now(),
         }
     }
 

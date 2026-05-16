@@ -50,13 +50,15 @@ fn assert_admitted_outcome(
     }
 }
 
-const fn fixture_peer_record(peer_id: PeerId, last_seen: Timestamp) -> PeerRecord {
+fn fixture_peer_record(peer_id: PeerId, last_seen: Timestamp) -> PeerRecord {
     PeerRecord {
         peer_id,
         addr_hint: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), 41_443),
         can_exit: false,
         capacity_hint: 0,
         last_seen,
+        region: String::new(),
+        region_last_verified_at: Timestamp::now(),
     }
 }
 

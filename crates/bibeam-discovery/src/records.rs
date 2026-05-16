@@ -53,6 +53,16 @@ pub struct PeerRecord {
     pub capacity_hint: u32,
     /// When this snapshot was captured.
     pub last_seen: Timestamp,
+    /// Operator-tagged free-form region string. Recommended
+    /// convention (documented in operator-runbook, not enforced
+    /// here) is `<iso3166-alpha2>-<sub-region>[-<city>]`, lowercase,
+    /// hyphen-separated. Empty until the coordinator populates it
+    /// at registration / heartbeat time.
+    pub region: String,
+    /// Wall-clock instant at which the coordinator's `GeoIP`
+    /// cross-check (R-REGION.2 / R-REGION.3) last confirmed that
+    /// `region` matched the peer's observed address.
+    pub region_last_verified_at: Timestamp,
 }
 
 /// One relay node the coordinator advertises for peers behind
@@ -71,6 +81,16 @@ pub struct RelayRecord {
     /// When the coordinator most recently confirmed the relay was
     /// reachable.
     pub last_seen: Timestamp,
+    /// Operator-tagged free-form region string. Recommended
+    /// convention (documented in operator-runbook, not enforced
+    /// here) is `<iso3166-alpha2>-<sub-region>[-<city>]`, lowercase,
+    /// hyphen-separated. Empty until the coordinator populates it
+    /// at registration / heartbeat time.
+    pub region: String,
+    /// Wall-clock instant at which the coordinator's `GeoIP`
+    /// cross-check (R-REGION.2 / R-REGION.3) last confirmed that
+    /// `region` matched the relay's observed address.
+    pub region_last_verified_at: Timestamp,
 }
 
 /// One exit node the coordinator advertises for cohort egress.
@@ -91,6 +111,16 @@ pub struct ExitRecord {
     /// When the coordinator most recently confirmed the exit was
     /// reachable.
     pub last_seen: Timestamp,
+    /// Operator-tagged free-form region string. Recommended
+    /// convention (documented in operator-runbook, not enforced
+    /// here) is `<iso3166-alpha2>-<sub-region>[-<city>]`, lowercase,
+    /// hyphen-separated. Empty until the coordinator populates it
+    /// at registration / heartbeat time.
+    pub region: String,
+    /// Wall-clock instant at which the coordinator's `GeoIP`
+    /// cross-check (R-REGION.2 / R-REGION.3) last confirmed that
+    /// `region` matched the exit's observed address.
+    pub region_last_verified_at: Timestamp,
 }
 
 impl PartialEq for ExitRecord {
@@ -99,6 +129,8 @@ impl PartialEq for ExitRecord {
             && self.addr == other.addr
             && self.wg_public_key == other.wg_public_key
             && self.last_seen == other.last_seen
+            && self.region == other.region
+            && self.region_last_verified_at == other.region_last_verified_at
     }
 }
 
@@ -158,6 +190,8 @@ mod tests {
             can_exit: true,
             capacity_hint: 42,
             last_seen: Timestamp::now(),
+            region: String::new(),
+            region_last_verified_at: Timestamp::now(),
         }
     }
 
@@ -166,6 +200,8 @@ mod tests {
             node_id: NodeId::new(),
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 2)), 51_820),
             last_seen: Timestamp::now(),
+            region: String::new(),
+            region_last_verified_at: Timestamp::now(),
         }
     }
 
@@ -176,6 +212,8 @@ mod tests {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 3)), 51_820),
             wg_public_key: secret.public(),
             last_seen: Timestamp::now(),
+            region: String::new(),
+            region_last_verified_at: Timestamp::now(),
         }
     }
 
@@ -239,6 +277,8 @@ mod tests {
             "addr": "192.0.2.4:51820",
             "wg_public_key": "this is not base64!!!",
             "last_seen": Timestamp::now(),
+            "region": "",
+            "region_last_verified_at": Timestamp::now(),
         });
         let err = serde_json::from_value::<ExitRecord>(bad_json).expect_err("must reject");
         // serde error must mention the wg key field somewhere in its chain.
