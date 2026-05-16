@@ -126,6 +126,7 @@ mod tests {
             members: vec![PeerId::new()],
             exits: vec![NodeId::new(), NodeId::new()],
             rotation_deadline: deadline,
+            region: String::new(),
         }
     }
 

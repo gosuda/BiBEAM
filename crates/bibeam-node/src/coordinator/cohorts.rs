@@ -41,6 +41,16 @@ const COHORTS_TABLE: TableDefinition<'_, &[u8; 16], &[u8]> = TableDefinition::ne
 /// Stored postcard-encoded inside the module-private cohorts table.
 /// Mirrors the shape downstream consumers (admissioner, rotation
 /// scheduler, audit log) expect.
+///
+/// Per §11 R-3 R-FLOOR every cohort carries a `region` tag — the
+/// [`super::admission_gate::AdmissionGate`] partitions its pending
+/// bucket by region and stamps each released cohort with the
+/// region tag at admission time. The field is plain
+/// [`String`] (matching the
+/// [`bibeam_discovery::PeerRecord::region`] precedent established
+/// at commit `f640ed9`): the empty string is the sentinel for
+/// "registrant did not declare a region", same as on
+/// [`bibeam_discovery::PeerRecord`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CohortRecord {
     /// Peers currently assigned to this cohort.
@@ -49,6 +59,11 @@ pub struct CohortRecord {
     pub exits: Vec<NodeId>,
     /// Wall-clock instant after which the cohort must rotate.
     pub rotation_deadline: Timestamp,
+    /// Region the cohort was assembled from (per §11 R-3 R-FLOOR).
+    /// Empty when the registrant did not declare one (matches the
+    /// [`bibeam_discovery::PeerRecord::region`] sentinel
+    /// convention).
+    pub region: String,
 }
 
 /// Failure modes for [`CohortStore`].
@@ -201,6 +216,7 @@ mod tests {
             members: vec![PeerId::new(), PeerId::new()],
             exits: vec![NodeId::new()],
             rotation_deadline: deadline,
+            region: String::new(),
         }
     }
 

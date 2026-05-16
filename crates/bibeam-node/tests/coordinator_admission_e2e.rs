@@ -67,6 +67,7 @@ fn fixture_cohort_record(rotation_deadline: Timestamp) -> CohortRecord {
         members: Vec::new(),
         exits: vec![NodeId::new(), NodeId::new()],
         rotation_deadline,
+        region: String::new(),
     }
 }
 
@@ -109,12 +110,16 @@ async fn admission_pipeline_round_trips_token_at_floor() {
     }
 
     // Drive every peer through the gate. The 30th admission
-    // should flip the cohort over the floor and admit.
+    // should flip the cohort over the floor and admit. Single-
+    // region happy path: every peer declares the same `us-east`
+    // region so the gate's R-FLOOR partitioning collapses to one
+    // bucket — matches pre-R-FLOOR behavior.
+    let region = "us-east";
     let mut bucketed_receivers: Vec<tokio::sync::oneshot::Receiver<_>> =
         Vec::with_capacity(all_peers.len());
     let mut explicit_first_admitted = false;
     for (index, peer_id) in all_peers.iter().enumerate() {
-        let outcome = gate.admit_or_bucket(*peer_id, cohort_id, &mut cohort_record);
+        let outcome = gate.admit_or_bucket(*peer_id, cohort_id, region, &mut cohort_record);
         let one_indexed = index + 1;
         match outcome {
             AdmissionOutcome::Admitted(response) => assert_admitted_outcome(
@@ -128,6 +133,9 @@ async fn admission_pipeline_round_trips_token_at_floor() {
                 bucketed_receivers.push(receiver);
                 assert!(one_indexed < ANONYMITY_FLOOR as usize);
             },
+            AdmissionOutcome::RegionMismatch { .. } => {
+                panic!("single-region happy path must never see a region mismatch")
+            },
         }
     }
 
@@ -138,7 +146,7 @@ async fn admission_pipeline_round_trips_token_at_floor() {
     // Drain the bucketed waiters — every one of them should
     // receive a MatchResponse now that the cohort meets the
     // floor.
-    let released = gate.drain_ready(cohort_id, &cohort_record);
+    let released = gate.drain_ready(region, cohort_id, &cohort_record, None);
     assert_eq!(released, bucketed_receivers.len());
     for mut receiver in bucketed_receivers {
         let response = receiver.try_recv().expect("waiter resolved");

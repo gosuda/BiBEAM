@@ -31,6 +31,7 @@ use tokio::time::{Instant, interval_at};
 use tokio_util::sync::CancellationToken;
 
 use super::admission_gate::AdmissionGate;
+use super::audit::AuditLog;
 use super::cohorts::{CohortStore, CohortStoreError};
 use super::registry::{PeerRegistry, RegistryError};
 
@@ -59,11 +60,21 @@ pub enum RotationError {
 /// Construct one instance per coordinator process; clone the
 /// [`Arc`]-wrapped fields freely into the axum handlers that
 /// share state with this loop.
+///
+/// Per §11 R-3 R-FLOOR the scheduler now also owns an
+/// [`AuditLog`] handle: each tick, when the gate's poll over an
+/// under-floor region surfaces a [`AdmissionGate::drain_ready`]
+/// refusal, the gate appends a
+/// [`super::audit::AuditKind::NoAnonymousPathAvailable`] entry
+/// through this handle. The scheduler accepts the audit log as
+/// `Option<Arc<AuditLog>>` so an integration test that does not
+/// want to spin up a tempfile-backed redb log can pass [`None`].
 #[derive(Debug)]
 pub struct RotationScheduler {
     registry: Arc<PeerRegistry>,
     cohorts: Arc<CohortStore>,
     gate: Arc<AdmissionGate>,
+    audit_log: Option<Arc<AuditLog>>,
     interval: Duration,
     heartbeat_slo: Duration,
 }
@@ -77,8 +88,16 @@ impl RotationScheduler {
         registry: Arc<PeerRegistry>,
         cohorts: Arc<CohortStore>,
         gate: Arc<AdmissionGate>,
+        audit_log: Option<Arc<AuditLog>>,
     ) -> Self {
-        Self::with_cadence(registry, cohorts, gate, ROTATION_INTERVAL, PEER_HEARTBEAT_SLO)
+        Self::with_cadence(
+            registry,
+            cohorts,
+            gate,
+            audit_log,
+            ROTATION_INTERVAL,
+            PEER_HEARTBEAT_SLO,
+        )
     }
 
     /// Construct a scheduler with custom timing. Intended for
@@ -90,10 +109,22 @@ impl RotationScheduler {
                   const adds an API promise we cannot honour at call \
                   sites that already hold runtime-allocated Arcs."
     )]
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "Test entry point: the cadence variant takes the \
+                  same 4-Arc dependency bundle the const-cadence \
+                  variant takes plus two Duration knobs the test \
+                  drives manually. Bundling these into a Config \
+                  struct only shifts the argument count off the \
+                  function signature and onto the struct literal at \
+                  every call site, and the constructor is exercised \
+                  by tests only — the production path uses `new`."
+    )]
     pub fn with_cadence(
         registry: Arc<PeerRegistry>,
         cohorts: Arc<CohortStore>,
         gate: Arc<AdmissionGate>,
+        audit_log: Option<Arc<AuditLog>>,
         interval: Duration,
         heartbeat_slo: Duration,
     ) -> Self {
@@ -101,6 +132,7 @@ impl RotationScheduler {
             registry,
             cohorts,
             gate,
+            audit_log,
             interval,
             heartbeat_slo,
         }
@@ -198,22 +230,33 @@ impl RotationScheduler {
     /// meets the floor, and cancel waiters whose cohort no longer
     /// exists in the store.
     ///
+    /// Walks every `(region, cohort_id)` pair the gate currently
+    /// has on its wait list (per the §11 R-3 R-FLOOR partitioning)
+    /// and calls [`AdmissionGate::drain_ready`] for each. The
+    /// gate's under-floor refusal path emits a
+    /// [`super::audit::AuditKind::NoAnonymousPathAvailable`] entry
+    /// through `self.audit_log` for every region whose bucket is
+    /// non-empty but sub-floor on this tick.
+    ///
     /// Returns `(released, cancelled)`. A cancelled waiter has its
     /// oneshot sender dropped, which surfaces to the awaiting axum
     /// handler as `RecvError`; the handler maps that to a 503 so
     /// the peer learns to retry rather than hang forever.
     fn reconcile_gate_with_cohort_store(&self) -> Result<(usize, usize), RotationError> {
-        let pending_cohort_ids = self.gate.pending_cohort_ids();
+        let pending_buckets = self.gate.pending_buckets();
         let mut live_cohort_ids: Vec<bibeam_core::CohortId> =
-            Vec::with_capacity(pending_cohort_ids.len());
+            Vec::with_capacity(pending_buckets.len());
         let mut released_total: usize = 0;
-        for cohort_id in pending_cohort_ids {
+        let audit_ref: Option<&AuditLog> = self.audit_log.as_deref();
+        for (region, cohort_id) in pending_buckets {
             let Some(record) = self.cohorts.get(&cohort_id)? else {
                 continue;
             };
-            live_cohort_ids.push(cohort_id);
-            released_total =
-                released_total.saturating_add(self.gate.drain_ready(cohort_id, &record));
+            if !live_cohort_ids.contains(&cohort_id) {
+                live_cohort_ids.push(cohort_id);
+            }
+            released_total = released_total
+                .saturating_add(self.gate.drain_ready(&region, cohort_id, &record, audit_ref));
         }
         let cancelled = self.gate.cancel_orphans(&live_cohort_ids);
         Ok((released_total, cancelled))
@@ -283,6 +326,7 @@ mod tests {
             members: vec![PeerId::new()],
             exits: vec![NodeId::new()],
             rotation_deadline: deadline,
+            region: String::new(),
         }
     }
 
@@ -297,6 +341,7 @@ mod tests {
             registry.clone(),
             cohorts.clone(),
             gate,
+            None,
             Duration::from_secs(60),
             Duration::from_secs(60),
         );
@@ -338,6 +383,7 @@ mod tests {
             registry,
             cohorts.clone(),
             gate.clone(),
+            None,
             Duration::from_secs(60),
             Duration::from_secs(60),
         );
@@ -353,10 +399,13 @@ mod tests {
 
         let peer = PeerId::new();
         let mut mutable_record = fixture_cohort(expired_deadline);
-        let outcome = gate.admit_or_bucket(peer, cohort_id, &mut mutable_record);
+        let outcome = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut mutable_record);
         let mut receiver = match outcome {
             AdmissionOutcome::Bucketed(receiver) => receiver,
             AdmissionOutcome::Admitted(_) => panic!("must bucket below floor of 30"),
+            AdmissionOutcome::RegionMismatch { .. } => {
+                panic!("fresh record must not mismatch")
+            },
         };
 
         let stats = scheduler.tick_once().expect("tick");
@@ -382,6 +431,7 @@ mod tests {
             registry,
             cohorts,
             gate,
+            None,
             Duration::from_secs(60),
             Duration::from_secs(120),
         );

@@ -55,7 +55,19 @@ use ulid::Ulid;
 const AUDIT_TABLE: TableDefinition<'_, &[u8; 16], &[u8]> = TableDefinition::new("operator_audit");
 
 /// Event-kind classifier on an [`AuditEntry`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// Per the §11 R-3 R-FLOOR cascading-edits, the
+/// [`AuditKind::NoAnonymousPathAvailable`] variant takes the
+/// task-spec-mandated struct shape (`{ region, pending_count }`) so
+/// downstream alerting / federation tooling can pattern-match on the
+/// classifier alone. To preserve the "kind classifier vs detail
+/// payload" separation across the rest of the enum, the unit
+/// variants still route their kind-specific context through
+/// [`AuditEntry::detail_json`]; the R-FLOOR refusal is the only
+/// variant that carries its payload on the classifier — and it does
+/// NOT redundantly stamp the same fields into `detail_json` so there
+/// remains exactly one source of truth per row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AuditKind {
     /// A peer was admitted into a cohort.
     Admission,
@@ -65,6 +77,23 @@ pub enum AuditKind {
     TokenIssued,
     /// An invite was redeemed via [`super::invite_admission`].
     InviteRedeemed,
+    /// The R-FLOOR per-region admission gate refused to release a
+    /// cohort because the region's pending bucket was non-empty but
+    /// under the anonymity-set floor — no path satisfying the
+    /// per-position invariant could be assembled. Emitted on every
+    /// gate poll (i.e. every
+    /// [`super::admission_gate::AdmissionGate::drain_ready`] call)
+    /// for the same region until either the bucket clears the floor
+    /// or the rotation scheduler evicts the bucket entirely. The
+    /// payload rides on the variant, not on `detail_json`, so
+    /// operators can pattern-match on the classifier directly.
+    NoAnonymousPathAvailable {
+        /// Region whose pending bucket failed the floor check.
+        region: String,
+        /// Count of pending registrations still parked in the
+        /// region's bucket at the moment of refusal.
+        pending_count: u32,
+    },
 }
 
 /// One row in the operator audit log.
@@ -235,6 +264,37 @@ impl AuditLog {
         })
     }
 
+    /// Record a §11 R-3 R-FLOOR refusal: the per-region admission
+    /// gate could not assemble a path satisfying the per-position
+    /// anonymity floor for `region` because the pending bucket is
+    /// non-empty but holds fewer than 30 members. Emitted by the
+    /// gate on every poll so an operator dashboard sees one row per
+    /// stalled tick, not a single "first noticed" entry.
+    ///
+    /// `detail_json` is left empty here — the variant carries its
+    /// own payload (`region`, `pending_count`), so there is no
+    /// second source of truth.
+    ///
+    /// # Errors
+    ///
+    /// Same as [`AuditLog::append`].
+    pub fn record_no_anonymous_path(
+        &self,
+        region: &str,
+        pending_count: u32,
+    ) -> Result<(), AuditError> {
+        self.append(&AuditEntry {
+            at: Timestamp::now(),
+            kind: AuditKind::NoAnonymousPathAvailable {
+                region: region.to_owned(),
+                pending_count,
+            },
+            peer_token: None,
+            ip_token: None,
+            detail_json: String::new(),
+        })
+    }
+
     /// Record an invite redemption. `audit_tag` is the breadcrumb
     /// produced by [`super::invite_admission::RedemptionBreadcrumb`].
     ///
@@ -352,6 +412,32 @@ mod tests {
         log.record_rotation(0, 0).expect("third");
         let rows = log.snapshot().expect("snapshot");
         assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn no_anonymous_path_carries_region_and_count_on_kind() {
+        // Contract: the §11 R-3 refusal payload rides on the
+        // AuditKind variant, NOT on detail_json. Catches a
+        // regression that mirrored the same data into detail_json
+        // (which would give the same row two sources of truth and
+        // make operator filtering depend on payload equality).
+        let (log, _temp) = log_with_temp_file();
+        log.record_no_anonymous_path("us-east", 7).expect("record");
+        let rows = log.snapshot().expect("snapshot");
+        assert_eq!(rows.len(), 1);
+        let entry = &rows[0];
+        match &entry.kind {
+            AuditKind::NoAnonymousPathAvailable { region, pending_count } => {
+                assert_eq!(region, "us-east");
+                assert_eq!(*pending_count, 7);
+            },
+            other => panic!("expected NoAnonymousPathAvailable, got {other:?}"),
+        }
+        // detail_json deliberately empty — payload is on the kind.
+        assert!(entry.detail_json.is_empty());
+        // The refusal is peer-agnostic and ip-agnostic.
+        assert!(entry.peer_token.is_none());
+        assert!(entry.ip_token.is_none());
     }
 
     #[test]
