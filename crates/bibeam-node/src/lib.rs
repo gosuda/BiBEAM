@@ -10,5 +10,11 @@
 //! [`coordinator`] sub-module owns the control-plane surface that
 //! previously lived in the standalone `bibeam-coordinator` crate
 //! (dissolved per §11 R-1).
+//!
+//! The [`forwarder`] sub-module implements the intermediate-node
+//! stateful UDP forwarder mode (R-MULTIHOP-NODE): a per-pair
+//! routing table + lease-enforced relay loop that never touches
+//! `WireGuard` payload material.
 
 pub mod coordinator;
+pub mod forwarder;
