@@ -20,6 +20,10 @@ rustls = { workspace = true }
 url = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+postcard = { workspace = true }
+base64 = { workspace = true }
+blake3 = { workspace = true }
+pkarr = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
@@ -30,4 +34,4 @@ parking_lot = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "reqwest", "tokio-tungstenite", "futures-util", "rustls", "url", "serde", "serde_json", "thiserror", "tracing"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "reqwest", "tokio-tungstenite", "futures-util", "rustls", "url", "serde", "serde_json", "postcard", "base64", "blake3", "pkarr", "thiserror", "tracing"]
