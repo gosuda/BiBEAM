@@ -15,6 +15,7 @@
 pub mod admission;
 pub mod admission_gate;
 pub mod cohorts;
+pub mod invite_admission;
 pub mod registry;
 pub mod rotation;
 pub mod server;

@@ -393,6 +393,7 @@ dependencies = [
  "bibeam-discovery",
  "bibeam-protocol",
  "bibeam-runtime",
+ "blake3",
  "clap",
  "dashmap",
  "governor",
