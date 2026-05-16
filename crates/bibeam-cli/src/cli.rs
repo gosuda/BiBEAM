@@ -273,19 +273,36 @@ async fn handle_down(config_override: Option<&std::path::Path>) -> Result<()> {
     Ok(())
 }
 
-/// `status` — placeholder; once the daemon listens on a local
-/// management port the handler probes `/healthz` and `/readyz`.
+/// `status` — print the ECH policy line today (F-CLI.7). The
+/// local management port's `/healthz` and `/readyz` probe lands
+/// once the daemon is fully wired up; this commit gives the
+/// subcommand a real, operator-visible thing to do.
 #[allow(
     clippy::unused_async,
-    reason = "async-shaped to keep the dispatch table uniform; the real handler does \
-              HTTP I/O against the local daemon."
+    reason = "async-shaped to keep the dispatch table uniform; later sub-items add a \
+              local HTTP probe against /healthz and /readyz from this body."
 )]
 async fn handle_status(config_override: Option<&std::path::Path>) -> Result<()> {
-    tracing::info!(
-        config_override = ?config_override,
-        "status: scaffold subcommand — health probe lands with the local mgmt port",
-    );
+    let cfg = crate::config::load_config(config_override)
+        .map_err(|err| anyhow::Error::new(err).context("status: load config"))?;
+    let policy = resolved_ech_policy(cfg.ech_policy.as_deref())?;
+    crate::ech::print_ech_status(policy);
     Ok(())
+}
+
+/// Parse a string-typed ECH policy from the figment-loaded
+/// config into the typed [`crate::ech::EchPolicy`]. `None`
+/// (operator did not set the key) falls back to the typed
+/// `Default` impl, which D-1 fixes at `Deferred`.
+fn resolved_ech_policy(raw: Option<&str>) -> Result<crate::ech::EchPolicy> {
+    use std::str::FromStr as _;
+    raw.map_or_else(
+        || Ok(crate::ech::EchPolicy::default()),
+        |value| {
+            crate::ech::EchPolicy::from_str(value)
+                .map_err(|err| anyhow::Error::new(err).context("status: parse ech-policy"))
+        },
+    )
 }
 
 /// `config` — print the resolved config (post-figment merge).

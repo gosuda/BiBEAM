@@ -40,6 +40,7 @@ toml = { workspace = true }               # `config` subcommand renders the reso
 tokio = { workspace = true, features = ["test-util"] } # virtual-time test fixtures for rotation_loop (start_paused)
 futures-util = { workspace = true }                    # BoxFuture in rotation-loop tests; FnMut(...) -> impl Future trait shape requires explicit boxing
 parking_lot = { workspace = true }                     # rotation-loop tests record causes through a parking_lot::Mutex (workspace policy forbids std::sync::Mutex)
+serde_json = { workspace = true }                      # serde_json round-trip assertions for the kebab-case ECH wire form
 
 # Linux-only capability inspection. The `caps` crate ships no
 # macOS / Windows targets, so `setup_tun()`'s privilege guard

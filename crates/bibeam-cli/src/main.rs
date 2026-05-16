@@ -3,6 +3,7 @@
 
 mod cli;
 mod config;
+mod ech;
 mod exit_pick;
 mod register;
 mod rotation;
