@@ -38,6 +38,11 @@
 //! egress, and an L4 SOCKS5 fallback for environments where a TUN
 //! device cannot be opened.
 //!
+//! The [`registration`] sub-module owns the node-side client of the
+//! coordinator registration + heartbeat flow (F-NODE.1) — the
+//! complement to the coord-side handler that lives in
+//! [`coordinator::server`].
+//!
 //! The [`rotation_handler`] sub-module owns the node-side response to
 //! coordinator-pushed `CohortRotated` events (F-NODE.6). It wraps the
 //! active [`bibeam_protocol::cohort::CohortLive`] snapshot in an
@@ -58,5 +63,6 @@ pub mod exit_mode;
 pub mod forwarder;
 pub mod quic_server;
 pub mod rate_limit;
+pub mod registration;
 pub mod rotation_handler;
 pub mod telemetry;
