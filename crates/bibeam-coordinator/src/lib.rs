@@ -12,4 +12,5 @@
 //! the routes and storage primitives are reachable from integration
 //! tests under `tests/`.
 
+pub mod registry;
 pub mod server;
