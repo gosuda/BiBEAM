@@ -56,7 +56,15 @@
 //! future protocols — plugs in via the
 //! [`quic_server::AcceptHandler`] trait so the loop primitive stays
 //! protocol-agnostic.
+//!
+//! The [`cohort_ws`] sub-module (F-NODE.5) maintains the long-lived
+//! WebSocket to the coordinator pool, decodes the
+//! [`bibeam_discovery::CoordinatorEvent`] stream, and routes each
+//! event to a pluggable [`cohort_ws::CohortHandler`] trait object.
+//! Reconnection rides on the F-DISC.3 round-robin failover pool with
+//! exponential-backoff-with-jitter between full-pool sweeps.
 
+pub mod cohort_ws;
 pub mod coordinator;
 pub mod dns;
 pub mod exit_mode;

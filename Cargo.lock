@@ -494,6 +494,7 @@ dependencies = [
  "pasetors",
  "postcard",
  "quinn",
+ "rand 0.10.1",
  "rcgen",
  "redb",
  "rustls",

@@ -112,6 +112,21 @@ pub const NODE_RATE_LIMIT_DROPS_TOTAL: &str = "bibeam_node_rate_limit_drops_tota
 /// no useful label dimension to slice on.
 pub const NODE_COHORT_ROTATIONS_TOTAL: &str = "bibeam_node_cohort_rotations_total";
 
+/// Prometheus metric name: total successful re-establishments of the
+/// long-lived coordinator WebSocket event stream after a prior drop.
+///
+/// Incremented exactly once per fresh
+/// [`bibeam_discovery::CoordinatorWs`] the F-NODE.5
+/// [`crate::cohort_ws::CohortWsReceiver`] obtains after a previous
+/// session ended (clean close, transport error, or coordinator-issued
+/// disconnect). The first successful connect at startup does NOT
+/// count — only the reconnects do, so the metric reads as "how often
+/// did we have to recover the control-plane event stream" rather
+/// than a confounded "total connects ever". Used by operators to
+/// detect coordinator flapping (a sustained non-zero rate indicates
+/// the coord pool is unstable rather than a single one-off blip).
+pub const NODE_COORD_WS_RECONNECTS_TOTAL: &str = "bibeam_node_coord_ws_reconnects_total";
+
 // -------------------------------------------------------------------
 // Gauges — Prometheus convention: name does NOT end in `_total`.
 // -------------------------------------------------------------------
@@ -192,6 +207,11 @@ pub fn register_node_metrics() {
         Unit::Count,
         "Total cohort rotation events processed by the node's RotationHandler (F-NODE.6)."
     );
+    describe_counter!(
+        NODE_COORD_WS_RECONNECTS_TOTAL,
+        Unit::Count,
+        "Total coordinator-WebSocket re-establishments after a prior session drop (initial connect at startup is not counted)."
+    );
 
     // Gauges ----------------------------------------------------------
     describe_gauge!(
@@ -237,6 +257,7 @@ mod tests {
         NODE_DNS_RESOLUTIONS_TOTAL,
         NODE_RATE_LIMIT_DROPS_TOTAL,
         NODE_COHORT_ROTATIONS_TOTAL,
+        NODE_COORD_WS_RECONNECTS_TOTAL,
     ];
 
     /// The complete set of gauge names this module defines.

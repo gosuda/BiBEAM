@@ -67,6 +67,17 @@ arc-swap = { workspace = true }
 # handler in a cancel-aware loop. Cohort-traffic relay + WG-datagram-forward
 # share this primitive as the inbound surface. ---
 quinn = { workspace = true }
+# --- F-NODE.5 cohort-WS receiver: backoff jitter draws from rand 0.10's thread-local RNG.
+# The reconnect loop uses `rng().random_range(0..jitter_ms)` to add `[0, jitter_ms)` ms
+# of noise on top of the deterministic exponential schedule so a fleet of nodes
+# does not synchronise reconnect storms against a recovering coordinator pool. ---
+rand = { workspace = true }
+# --- F-NODE.5 cohort-WS receiver: `CoordinatorWs::connect` consumes
+# `Arc<rustls::ClientConfig>`. The shared TLS config is built once by
+# `bibeam_transport::coordinator_client_config` at startup and threaded through to
+# every reconnect attempt; this crate names the type on the public
+# `CohortWsReceiver` constructor so callers wire it without a transport-internal cast. ---
+rustls = { workspace = true }
 
 [dev-dependencies]
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---
@@ -83,4 +94,4 @@ rustls = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot", "rustls"]
