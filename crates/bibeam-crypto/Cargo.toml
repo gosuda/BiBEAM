@@ -6,11 +6,11 @@ license = { workspace = true }
 repository = { workspace = true }
 keywords = { workspace = true }
 categories = { workspace = true }
-description = "Key and keying-material helpers: x25519 peer keys, control-plane AEAD, ed25519 identity, paseto v4, hkdf, blake3-keyed psk."
+description = "Key and keying-material helpers: x25519 peer keys and control-plane chacha20-poly1305 aead."
 
 [dependencies]
-bibeam-core = { workspace = true }
 x25519-dalek = { workspace = true }
+chacha20poly1305 = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }
 zeroize = { workspace = true }
@@ -19,9 +19,3 @@ thiserror = { workspace = true }
 
 [lints]
 workspace = true
-
-[package.metadata.cargo-machete]
-# `bibeam-core` is the shared id/error/redaction surface every BiBEAM
-# crate links against; F-CRYPTO.2..8 will import from it, but this
-# F-CRYPTO.1 slice does not yet.
-ignored = ["bibeam-core"]

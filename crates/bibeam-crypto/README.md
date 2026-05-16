@@ -1,3 +1,3 @@
 # bibeam-crypto
 
-Key and keying-material helpers: x25519 peer keys, control-plane AEAD, ed25519 identity, paseto v4, hkdf, blake3-keyed psk.
+Key and keying-material helpers: x25519 peer keys and control-plane chacha20-poly1305 aead.
