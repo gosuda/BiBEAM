@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod aead;
+pub mod eq;
 pub mod identity_key;
 pub mod invite;
 pub mod kdf;
@@ -9,6 +10,7 @@ pub mod token;
 pub mod wg_keys;
 
 pub use aead::{AeadError, ControlAead, KEY_LEN as AEAD_KEY_LEN, NONCE_LEN as AEAD_NONCE_LEN};
+pub use eq::{ct_eq_32, ct_eq_bytes};
 pub use identity_key::{IdentityKeyError, IdentityPublicKey, IdentitySecretKey};
 pub use invite::{
     INVITE_CODE_LEN, InviteCode, InviteCodeError, MASTER_INVITE_KEY_LEN, MasterInviteKey,
