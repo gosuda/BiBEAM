@@ -12,5 +12,5 @@ pub use error::DiscoveryError;
 pub use failover::CoordinatorPool;
 pub use http::{CoordinatorClient, status_is_retriable};
 pub use pkarr_fallback::DhtFallback;
-pub use records::PeerRecord;
+pub use records::{ExitRecord, PeerRecord, RelayRecord};
 pub use ws::{CoordinatorEvent, CoordinatorWs, encode_event};
