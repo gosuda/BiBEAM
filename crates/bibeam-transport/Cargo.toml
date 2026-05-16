@@ -16,6 +16,7 @@ tokio = { workspace = true }
 tokio-util = { workspace = true }
 boringtun = { workspace = true }
 rustls = { workspace = true }
+webpki-roots = { workspace = true }
 bytes = { workspace = true }
 futures-util = { workspace = true }
 parking_lot = { workspace = true }
@@ -26,4 +27,4 @@ tracing = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "bytes", "futures-util", "parking_lot", "thiserror", "tracing"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "webpki-roots", "bytes", "futures-util", "parking_lot", "thiserror", "tracing"]
