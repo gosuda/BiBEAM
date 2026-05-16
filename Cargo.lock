@@ -442,6 +442,7 @@ dependencies = [
  "figment",
  "metrics",
  "metrics-exporter-prometheus",
+ "mimalloc",
  "serde",
  "thiserror 2.0.18",
  "tokio",

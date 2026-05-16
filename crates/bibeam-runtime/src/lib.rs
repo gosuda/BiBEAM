@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
+pub mod alloc;
 pub mod config;
 pub mod health;
 pub mod log;
