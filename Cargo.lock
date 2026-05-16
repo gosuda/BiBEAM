@@ -443,6 +443,7 @@ dependencies = [
  "bytes",
  "fast-socks5",
  "futures-util",
+ "governor",
  "ipnet",
  "parking_lot",
  "postcard",
