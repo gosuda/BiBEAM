@@ -152,17 +152,25 @@ Each per-crate task is the **first non-stub merge** for that crate. Sub-items ar
 - **F-PROTO.7** Error codes enum — `ProtocolError` with `From` impls for `postcard::Error` and `bibeam_core::Error`.
 - **Gate.** `cargo clippy -p bibeam-protocol …` clean + property tests under `cargo nextest run -p bibeam-protocol` pass.
 
-### F-CRYPTO — `bibeam-crypto` (depends on `bibeam-core`)
+### F-CRYPTO — `bibeam-crypto` (depends on `bibeam-core`; scope narrowed by D-4)
 
-- **F-CRYPTO.1** Noise_IK_25519_ChaChaPoly_BLAKE3 wrapper — thin `Handshake` struct over `snow` with state-machine guards.
-- **F-CRYPTO.2** AEAD ChaCha20-Poly1305 wrapper — per-packet `Aead::seal`/`Aead::open` with nonce derivation from frame counter.
-- **F-CRYPTO.3** Long-term identity keypair — `ed25519-dalek` `SigningKey` / `VerifyingKey`; PEM-encoded persistence helpers.
-- **F-CRYPTO.4** PASETO v4 issuer + verifier — `pasetors::v4` public-key flow; `Issuer::issue(claims) -> Token`, `Verifier::verify(token) -> Claims`.
-- **F-CRYPTO.5** HKDF key derivation — `derive_session_key(prk: &[u8], info: &[u8]) -> [u8; 32]`.
-- **F-CRYPTO.6** Invite-code derivation — `BLAKE3-keyed-hash(master_invite, invite_code) -> SessionPSK`.
-- **F-CRYPTO.7** `Zeroizing` wrappers for `[u8; 32]` secrets — `derive Zeroize, ZeroizeOnDrop`.
+D-4 (WireGuard wire-compat via `boringtun`) places the data-plane packet handle in `bibeam-transport` (see F-TRANS.1) — boringtun owns the Noise_IK_25519_ChaChaPoly_BLAKE2s handshake and per-packet AEAD internally. This crate's responsibility narrows to **pure key and material helpers**: the X25519 / Ed25519 keys BiBEAM mints, the PASETO v4 session tokens the coordinator issues, the BLAKE3-keyed-hash invite-code derivation, the HKDF key-stretching used in both planes, and the Zeroize + constant-time-compare hygiene primitives. No packet processing, no config-file rendering, no `wg-quick`-shaped serialization — those live in `bibeam-transport`.
+
+**Secret lifecycle (load-bearing — defines who owns which derivation):** invite-code material flows through this crate in two distinct stages with **non-overlapping ownership**:
+1. **Per-invite (long-term).** F-CRYPTO.6 BLAKE3-keyed-hashes `(master_invite, invite_code)` → `SessionPSK` (32 bytes). One per invite redemption. Persists across rotations.
+2. **Per-rotation (short-term).** F-CRYPTO.5 HKDF-extracts-then-expands `SessionPSK` with rotation-scoped info (`b"bibeam/wg-psk/v1"` plus the rotation counter) → `WgPsk` (32 bytes). One per session-rotation window. Fed into F-TRANS.1's WG peer setup.
+
+F-CRYPTO.1 does **not** derive any PSK — it only generates the X25519 keypair and exposes its WG-wire base64 form. Config-shape assembly (combining keypair + PSK + endpoint + allowed-IPs into a peer-config record + rendering `wg-quick`-parseable text) lives in `bibeam-transport`.
+
+- **F-CRYPTO.1** **X25519 keypair primitives for WG peers** — generate an `x25519-dalek` `StaticSecret` + derived `PublicKey`; encode the public key in WireGuard-wire base64 form and decode the inverse; round-trip preserves bytes. **No PSK derivation, no config rendering, no boringtun dep here.**
+- **F-CRYPTO.2** **control-plane AEAD wrapper** — `chacha20poly1305` `Aead::seal` / `Aead::open` for non-WG sealing needs (PASETO claim-extension sealing, redb audit-log entry sealing). The data-plane AEAD is owned by boringtun inside `bibeam-transport` and is not exposed here.
+- **F-CRYPTO.3** Long-term identity keypair — `ed25519-dalek` `SigningKey` / `VerifyingKey`; PEM-encoded persistence helpers. Used for invite-code signing (coordinator side) and verification (client side) — separate from F-CRYPTO.1's X25519 WG-peer keys.
+- **F-CRYPTO.4** PASETO v4 issuer + verifier — `pasetors::v4` public-key flow; `Issuer::issue(claims) -> Token`, `Verifier::verify(token) -> Claims`. The token authorizes the coordinator-issued WG peer config for a cohort assignment.
+- **F-CRYPTO.5** **HKDF rotation-scoped key derivation** — `derive_wg_psk(session_psk: &SessionPSK, rotation_counter: u64) -> WgPsk`; HKDF-extract-then-expand with info `b"bibeam/wg-psk/v1"` + the rotation counter encoded LE. Sole owner of the per-rotation WG PSK derivation. Also exposes a general `derive_subkey(prk, info) -> [u8; 32]` for any other control-plane sub-key need (matching the original spec but with the WG PSK case promoted to a named, dedicated entry-point).
+- **F-CRYPTO.6** **Invite-code → SessionPSK derivation** — `derive_session_psk(master_invite: &MasterInviteKey, invite_code: &InviteCode) -> SessionPSK`; BLAKE3-keyed-hash. Sole owner of the per-invite long-term PSK. Does not produce the WG PSK directly — that is F-CRYPTO.5's job.
+- **F-CRYPTO.7** `Zeroizing` wrappers for `[u8; 32]` secrets — `derive Zeroize, ZeroizeOnDrop`. Applies to `SessionPSK`, `WgPsk`, and the X25519 `StaticSecret`.
 - **F-CRYPTO.8** Constant-time compare — `subtle::ConstantTimeEq` on tokens, MAC tags, and key fingerprints.
-- **Gate.** `cargo clippy -p bibeam-crypto …` clean + Noise IK round-trip test (handshake → AEAD seal/open) passes.
+- **Gate.** `cargo clippy -p bibeam-crypto …` clean + integration tests in this crate pass: (a) PASETO v4 issue → verify round-trip produces the same claims; (b) F-CRYPTO.6 `derive_session_psk` is deterministic across runs given identical inputs; (c) F-CRYPTO.5 `derive_wg_psk` produces distinct outputs for distinct rotation counters on the same `SessionPSK`; (d) X25519 WG keypair base64 encode → decode preserves the public-key bytes.
 
 ### F-RT — `bibeam-runtime` (depends on `bibeam-core`)
 
@@ -188,18 +196,20 @@ Each per-crate task is the **first non-stub merge** for that crate. Sub-items ar
 - **F-TUN.8** Backpressure — bounded `tokio::sync::mpsc` channels at every queue boundary; transport-neutral uniform drop-newest-on-overflow policy in the MVP. No QoS classifier lives in the tunnel; per-class scheduling (DSCP-aware, flow-keyed) is a deferred enhancement that lands as its own task only after a classifier exists.
 - **Gate.** `cargo clippy -p bibeam-tun …` clean + on Linux, a loopback test brings up a TUN, writes a UDP packet, and reads it on the other side.
 
-### F-TRANS — `bibeam-transport` (depends on `core`, `protocol`, `crypto`)
+### F-TRANS — `bibeam-transport` (depends on `core`, `protocol`, `crypto`; data-plane reshaped by D-4)
 
-- **F-TRANS.1** Quinn 0.11 endpoint wrapper — `Endpoint::client_with_config` + `Endpoint::server_with_config`; rustls-ring backend per workspace deps.
-- **F-TRANS.2** TLS 1.3 rustls config + ECH plumbing — base config with `rustls-ring`. When D-1 picks "best-effort ECH": **this crate** owns DNS HTTPS record lookup (via `hickory-resolver` `lookup_https`) and the rustls ECH-extension wiring (rustls's ECH support is experimental / feature-flagged at time of writing). When D-1 picks "deferred" or "skipped": no ECH code lands. The CLI does not load DNS HTTPS records — it only consumes the policy (F-CLI.7).
-- **F-TRANS.3** Datagram extension (RFC 9221) — `Connection::send_datagram` / `recv_datagram` for Noise-sealed IP frames; max-size negotiation.
-- **F-TRANS.4** STUN client (RFC 8489) — public-address discovery; one binding-request to a configured STUN server.
-- **F-TRANS.5** ICE-lite simultaneous open hole-punch — both peers send to each other's STUN-discovered addr at sync'd time; coordinator orchestrates the rendezvous timestamp.
-- **F-TRANS.6** Relay fallback — when hole-punch fails (5-s timeout), redirect via the assigned relay node.
-- **F-TRANS.7** SOCKS5 fallback — `fast-socks5` over QUIC datagram tunnel for restricted networks where TUN is not available.
+Per D-4, the data plane is **WireGuard (UDP)** via `boringtun`, not Quinn QUIC + RFC 9221 datagrams. This crate owns: the UDP socket plumbing wrapping boringtun, the BiBEAM-side `WgTunnel` packet handle (peer add/remove, encrypt/decrypt path), the `WgPeerConfig` shape + `wg-quick`-parseable rendering (moved here from F-CRYPTO per D-4's architecture line — config-shape rendering encodes a transport peer relationship, not a key derivation), the STUN-based hole-punch, the relay-fallback path, the SOCKS5-fallback bridge, the rate limiter, and the rustls config for BiBEAM's *own* coordinator-bound HTTPS only (not user-app TLS — that's end-to-end). QUIC / RFC 9221 references are retired.
+
+- **F-TRANS.1** **boringtun + UDP socket wrapper** — add `boringtun` to `[workspace.dependencies]` and to this crate's `[dependencies]`. `tokio::net::UdpSocket` plus a `WgTunnel` handle wrapping boringtun's `Tunn` (or current equivalent). Receives incoming UDP packets, feeds them through boringtun's decap, surfaces decrypted IP frames upward; takes outgoing IP frames downward, feeds them through boringtun's encap, sends as UDP packets. Peer add/remove + per-peer counters surface upward. Replaces the original Quinn endpoint wrapper.
+- **F-TRANS.2** **rustls config for coordinator-bound HTTPS only** — `rustls-ring` base config for BiBEAM's own control-plane HTTPS (CLI/node → coordinator). Per D-1, user-app TLS is end-to-end and BiBEAM-transparent; this crate does NOT terminate user TLS. ECH on BiBEAM's own HTTPS lands as a follow-up PR once rustls's ECH stabilizes.
+- **F-TRANS.3** **`WgPeerConfig` assembly + `wg-quick` rendering** *(repurposed from the retired RFC 9221 datagram extension, which is moot under D-4)*. Define `pub struct WgPeerConfig { public_key, preshared_key, endpoint, allowed_ips, persistent_keepalive }` combining F-CRYPTO.1's X25519 public key + F-CRYPTO.5's `WgPsk`. Implement `to_wg_quick(&self) -> String` producing a `wg-quick`-parseable `[Peer]` section. Used by the coordinator to mint configs and by `bibeam-cli` to render configs for stock WireGuard clients. Round-trip-verified against a captured `wg-quick` fixture.
+- **F-TRANS.4** STUN client (RFC 8489) — public-address discovery; one binding-request to a configured STUN server. Operates directly on this crate's UDP socket.
+- **F-TRANS.5** ICE-lite simultaneous-open hole-punch — both peers send WG handshake initiations to each other's STUN-discovered addr at a sync'd timestamp orchestrated by the coordinator. The hole-punch packets ARE the boringtun handshake first message.
+- **F-TRANS.6** Relay fallback — when hole-punch fails (5-s timeout), redirect WG packets via the assigned relay node. Relay forwards WG datagrams between two cohort members.
+- **F-TRANS.7** SOCKS5 fallback — `fast-socks5` over a side-channel for restricted networks where TUN is not available. The `bibeam-cli` daemon hosts the local SOCKS5 listener (F-CLI.8) and forwards via this transport.
 - **F-TRANS.8** Per-session rate limiter — `governor::RateLimiter` on bytes/sec per session; coordinator-configurable.
-- **F-TRANS.9** Connection telemetry — `tracing` spans for handshake, hole-punch, relay-fallback, datagram-loss counters.
-- **Gate.** `cargo clippy -p bibeam-transport …` clean + a two-process test establishes a QUIC + Noise tunnel over localhost and exchanges a 1-MB payload.
+- **F-TRANS.9** Connection telemetry — `tracing` spans for WG handshake, hole-punch, relay-fallback, decrypt-failure counters.
+- **Gate.** `cargo clippy -p bibeam-transport …` clean + a two-process integration test establishes a WireGuard tunnel over localhost UDP through `WgTunnel` and exchanges a 1-MB payload; `WgPeerConfig::to_wg_quick()` output is byte-identical to a captured `wg-quick` fixture for a fixed input.
 
 ### F-DISC — `bibeam-discovery` (depends on `core`, `protocol`, `crypto`)
 
