@@ -191,6 +191,58 @@ impl AdmissionGate {
     pub fn pending_count(&self) -> usize {
         self.pending.lock().len()
     }
+
+    /// Unique `cohort_id`s currently represented on the wait list.
+    ///
+    /// The rotation scheduler (F-COORD.6) reads this set so it can
+    /// call [`AdmissionGate::drain_ready`] against every cohort
+    /// that has at least one bucketed waiter, without scanning the
+    /// full redb cohort store. The returned [`Vec`] is a snapshot —
+    /// fresh waiters bucketed after the call are not reflected
+    /// (that is fine; the next tick picks them up).
+    #[must_use]
+    pub fn pending_cohort_ids(&self) -> Vec<CohortId> {
+        let mut ids: Vec<CohortId> = {
+            let waiters = self.pending.lock();
+            waiters.iter().map(|entry| entry.cohort_id).collect()
+        };
+        ids.sort_unstable_by_key(|cohort| *cohort.as_ulid());
+        ids.dedup();
+        ids
+    }
+
+    /// Cancel every waiter whose `cohort_id` is not present in
+    /// `live_cohort_ids`. Drops the matching
+    /// [`tokio::sync::oneshot::Sender`]s, which surfaces to the
+    /// awaiting axum handler as `oneshot::error::RecvError` — the
+    /// handler maps that to `503 Service Unavailable` so the peer
+    /// learns to retry rather than hang forever.
+    ///
+    /// Returns the count of waiters that were cancelled. Called by
+    /// the rotation scheduler after a cohort eviction so a peer
+    /// bucketed under a cohort that has since been evicted does
+    /// not leak its sender into the next epoch.
+    pub fn cancel_orphans<CohortIdSlice>(&self, live_cohort_ids: CohortIdSlice) -> usize
+    where
+        CohortIdSlice: AsRef<[CohortId]>,
+    {
+        let live = live_cohort_ids.as_ref();
+        let mut waiters = self.pending.lock();
+        let mut surviving: Vec<PendingAdmission> = Vec::with_capacity(waiters.len());
+        let mut cancelled: usize = 0;
+        for entry in waiters.drain(..) {
+            if live.contains(&entry.cohort_id) {
+                surviving.push(entry);
+            } else {
+                // Dropping `entry` drops `response_tx`, which the
+                // awaiting handler observes as RecvError.
+                cancelled = cancelled.saturating_add(1);
+                drop(entry);
+            }
+        }
+        *waiters = surviving;
+        cancelled
+    }
 }
 
 /// Build a wire [`MatchResponse`] from the cohort id + record.
