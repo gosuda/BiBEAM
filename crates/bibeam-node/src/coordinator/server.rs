@@ -162,7 +162,12 @@ async fn handle_register(Json(_request): Json<Register>) -> Response {
     clippy::unused_async,
     reason = "axum's `post(...)` route signature requires `async`; the \
               stubbed body does no I/O until the F-COORD.4 admissioner \
-              and F-COORD.5 gate land."
+              and F-COORD.5 gate land. The R-MULTIHOP-COORD path-assembly \
+              the matchmaker will call lives in [`super::multihop`] — the \
+              service-layer wiring instantiates a `MultiHopBuilder`, \
+              snapshots the live cohort state through a `RegionView`, \
+              and calls `MultiHopBuilder::assemble` from inside this \
+              handler once the F-COORD.4/5 sub-items land."
 )]
 async fn handle_match(_bearer: BearerToken, Json(_request): Json<MatchRequest>) -> Response {
     pending_service()

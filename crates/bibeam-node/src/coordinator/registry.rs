@@ -215,6 +215,7 @@ mod tests {
             last_seen: Timestamp::now(),
             region: String::new(),
             region_last_verified_at: Timestamp::now(),
+            wg_public_key: None,
         }
     }
 

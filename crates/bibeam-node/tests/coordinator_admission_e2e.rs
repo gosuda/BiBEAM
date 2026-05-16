@@ -60,6 +60,7 @@ fn fixture_peer_record(peer_id: PeerId, last_seen: Timestamp) -> PeerRecord {
         last_seen,
         region: String::new(),
         region_last_verified_at: Timestamp::now(),
+        wg_public_key: None,
     }
 }
 

@@ -21,6 +21,7 @@ pub mod geoip_verify;
 pub mod health;
 pub mod invite_admission;
 pub mod log_hooks;
+pub mod multihop;
 pub mod rate_limit;
 pub mod registry;
 pub mod rotation;

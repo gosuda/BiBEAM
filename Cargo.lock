@@ -483,6 +483,7 @@ dependencies = [
  "fast-socks5",
  "governor",
  "hickory-resolver",
+ "ipnet",
  "maxminddb",
  "mimalloc",
  "parking_lot",

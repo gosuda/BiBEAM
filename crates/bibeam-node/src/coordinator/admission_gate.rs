@@ -380,6 +380,33 @@ impl AdmissionGate {
         self.pending.lock().get(region).map_or(0, Vec::len)
     }
 
+    /// Read-only snapshot of every peer currently bucketed under
+    /// `region`. Returns the [`PeerId`]s in arrival order (the same
+    /// order the gate would release them on a drain).
+    ///
+    /// Added for R-MULTIHOP-COORD's per-position floor check at
+    /// path-assembly time: the multi-hop assembler counts how many
+    /// in-role flows sit in a region's bucket today, then refuses
+    /// the request when the cohort is short of the per-position
+    /// floor. The accessor is read-only — the gate is never mutated
+    /// from the path-assembly module (separation of concerns: the
+    /// gate owns the wait-list shape, the assembler owns the
+    /// cohort-picking shape).
+    ///
+    /// Returns an empty [`Vec`] when the region has no bucketed
+    /// peers; callers MUST treat absent-region and empty-bucket as
+    /// the same case (the gate clears empty buckets eagerly so a
+    /// region that drained on the previous tick disappears from
+    /// the map).
+    #[must_use]
+    pub fn members_in_region(&self, region: &str) -> Vec<PeerId> {
+        self.pending
+            .lock()
+            .get(region)
+            .map(|bucket| bucket.iter().map(|entry| entry.peer_id).collect())
+            .unwrap_or_default()
+    }
+
     /// Snapshot of every `(region, cohort_id)` pair currently
     /// represented on the wait list, sorted for determinism.
     ///

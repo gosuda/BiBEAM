@@ -63,6 +63,26 @@ pub struct PeerRecord {
     /// cross-check (R-REGION.2 / R-REGION.3) last confirmed that
     /// `region` matched the peer's observed address.
     pub region_last_verified_at: Timestamp,
+    /// The peer's X25519 `WireGuard` public key, when it has
+    /// registered one. Absent until the peer's registration carries
+    /// the key (R-MULTIHOP-COORD option (c) cascading-edits).
+    ///
+    /// The coordinator's multi-hop path-assembler reads this field to
+    /// build the client side of the client↔exit `WgPeerConfig` —
+    /// see [`bibeam_protocol::multihop::WgPeerConfig`]. When this is
+    /// [`None`] the assembler refuses the request rather than
+    /// silently minting a key (the coord NEVER holds private key
+    /// material; minting one peer-side would be unverifiable).
+    ///
+    /// `Option` (rather than the empty-string sentinel used by
+    /// [`Self::region`]) is the right shape here: the empty case has
+    /// no observably distinct "this is the empty key" form — all-
+    /// zero is a valid (if useless) 32-byte WG public key, so a
+    /// sentinel would alias a real-but-broken registration to the
+    /// absent case. `Option` keeps the two distinguishable in the
+    /// type system.
+    #[serde(default, with = "wg_public_key_option_serde")]
+    pub wg_public_key: Option<WgPublicKey>,
 }
 
 /// One relay node the coordinator advertises for peers behind
@@ -175,6 +195,60 @@ pub mod wg_public_key_serde {
     }
 }
 
+/// Serde adapter for `Option<bibeam_crypto::WgPublicKey>`.
+///
+/// Wraps [`wg_public_key_serde`] in an [`Option`] so a peer that has
+/// not yet registered a `WireGuard` public key (R-MULTIHOP-COORD
+/// option (c)) shows up on the wire as `null` (JSON) or the
+/// option-none discriminant (postcard) — never as a 32-byte zero
+/// public key. Keeping the two cases observably distinct lets the
+/// multi-hop path-assembler return [`Err`] for an absent key instead
+/// of silently building a `WgPeerConfig` around a useless all-zero
+/// public key.
+///
+/// The shape is the standard "newtype helper + Option-wrapper"
+/// pattern serde uses for `Option<T>` where `T` has a custom adapter
+/// — `Wrapper(#[serde(with = "...")] T)` plus
+/// `Option<Wrapper>::deserialize` / `serialize_some` on the way out.
+pub mod wg_public_key_option_serde {
+    use bibeam_crypto::WgPublicKey;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    /// Transparent newtype that carries the [`super::wg_public_key_serde`]
+    /// adapter so an `Option<Wrapper>` (de)serialises through the same
+    /// `wg`-wire base64 string the non-option fields use.
+    #[derive(Serialize, Deserialize)]
+    #[serde(transparent)]
+    struct Wrapper(#[serde(with = "super::wg_public_key_serde")] WgPublicKey);
+
+    /// Encode an optional [`WgPublicKey`] — `None` ⇒ wire-null,
+    /// `Some(key)` ⇒ the same base64 string the non-option fields use.
+    pub fn serialize<TargetSerializer>(
+        key: &Option<WgPublicKey>,
+        serializer: TargetSerializer,
+    ) -> Result<TargetSerializer::Ok, TargetSerializer::Error>
+    where
+        TargetSerializer: Serializer,
+    {
+        match key {
+            Some(inner) => serializer.serialize_some(&Wrapper(inner.clone())),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    /// Decode an optional [`WgPublicKey`] from wire-null or a
+    /// base64-string body.
+    pub fn deserialize<'de, SourceDeserializer>(
+        deserializer: SourceDeserializer,
+    ) -> Result<Option<WgPublicKey>, SourceDeserializer::Error>
+    where
+        SourceDeserializer: Deserializer<'de>,
+    {
+        let opt = Option::<Wrapper>::deserialize(deserializer)?;
+        Ok(opt.map(|wrapped| wrapped.0))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -192,6 +266,7 @@ mod tests {
             last_seen: Timestamp::now(),
             region: String::new(),
             region_last_verified_at: Timestamp::now(),
+            wg_public_key: None,
         }
     }
 
@@ -231,6 +306,53 @@ mod tests {
         let encoded = postcard::to_allocvec(&original).expect("encode");
         let decoded: PeerRecord = postcard::from_bytes(&encoded).expect("decode");
         assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn peer_record_with_wg_public_key_round_trips() {
+        // Contract: PeerRecord carrying a registered `wg_public_key`
+        // (R-MULTIHOP-COORD option (c)) round-trips through both JSON
+        // and postcard. The JSON form must carry the key as its
+        // base64 string (the same shape ExitRecord uses) so operators
+        // can copy/paste registrations between transports.
+        let secret = WgSecretKey::generate();
+        let original = PeerRecord {
+            wg_public_key: Some(secret.public()),
+            ..sample_peer_record()
+        };
+
+        let encoded_json = serde_json::to_string(&original).expect("encode json");
+        let key = original.wg_public_key.as_ref().expect("set above");
+        let expected_base64 = key.to_wg_base64();
+        assert!(encoded_json.contains(&expected_base64), "{encoded_json}");
+        let decoded_json: PeerRecord = serde_json::from_str(&encoded_json).expect("decode json");
+        assert_eq!(decoded_json, original);
+
+        let encoded_pc = postcard::to_allocvec(&original).expect("encode postcard");
+        let decoded_pc: PeerRecord = postcard::from_bytes(&encoded_pc).expect("decode postcard");
+        assert_eq!(decoded_pc, original);
+    }
+
+    #[test]
+    fn peer_record_missing_wg_public_key_field_defaults_to_none() {
+        // Contract: a pre-R-MULTIHOP-COORD JSON shape that omits
+        // `wg_public_key` entirely must still deserialise — the
+        // field carries `#[serde(default)]` so the option lands as
+        // `None`. Catches a regression that made the new field a
+        // hard wire requirement (which would break every existing
+        // PeerRecord publisher on rollout).
+        let json_without_wg = serde_json::json!({
+            "peer_id": PeerId::new(),
+            "addr_hint": "192.0.2.4:41443",
+            "can_exit": false,
+            "capacity_hint": 0,
+            "last_seen": Timestamp::now(),
+            "region": "",
+            "region_last_verified_at": Timestamp::now(),
+        });
+        let decoded: PeerRecord =
+            serde_json::from_value(json_without_wg).expect("decode legacy shape");
+        assert!(decoded.wg_public_key.is_none());
     }
 
     #[test]
