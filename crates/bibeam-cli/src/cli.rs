@@ -140,7 +140,89 @@ async fn handle_up(
     );
     let armoured = obtain_invite_string(invite)?;
     log_parsed_invite(&armoured)?;
-    probe_tun_or_fallback().await
+    let cfg = crate::config::load_config(config_override)
+        .map_err(|err| anyhow::Error::new(err).context("up: load config"))?;
+    run_up_data_plane(&cfg).await
+}
+
+/// Drive the data-plane bring-up: probe TUN, fall back to SOCKS5
+/// when privilege is missing. The cancel token is wired up by
+/// [`bibeam_runtime::shutdown_signal`] so the daemon exits
+/// cleanly on `SIGINT` / `SIGTERM`.
+async fn run_up_data_plane(cfg: &crate::config::Config) -> Result<()> {
+    let tun_config = tun_config_from(cfg);
+    let outcome = crate::tun_setup::setup_tun(&tun_config).await;
+    match outcome {
+        Ok(_device) => run_tun_branch(&tun_config).await,
+        Err(crate::tun_setup::TunSetupError::NoPrivilege { platform, help }) => {
+            run_fallback_branch(cfg, platform, help).await
+        },
+        Err(other) => Err(anyhow::Error::new(other).context("up: TUN setup failed")),
+    }
+}
+
+/// "TUN opened" branch: log the opened-device line, park on
+/// shutdown.
+async fn run_tun_branch(tun_config: &crate::tun_setup::TunSetupConfig) -> Result<()> {
+    log_tun_opened(tun_config);
+    wait_for_shutdown_signal().await
+}
+
+/// "no privilege" branch: log the fallback handoff, run the
+/// SOCKS5 listener until shutdown.
+async fn run_fallback_branch(
+    cfg: &crate::config::Config,
+    platform: &'static str,
+    help: &'static str,
+) -> Result<()> {
+    log_no_privilege(platform, help);
+    run_socks5_until_shutdown(cfg).await
+}
+
+/// Build a [`crate::tun_setup::TunSetupConfig`] from the merged
+/// figment-loaded config. Each `None` field falls back to the
+/// in-module default the consumer carries.
+fn tun_config_from(cfg: &crate::config::Config) -> crate::tun_setup::TunSetupConfig {
+    let mut tun_config = crate::tun_setup::TunSetupConfig::default();
+    if let Some(name) = cfg.tun_interface_name.as_deref() {
+        // clone_into reuses tun_config.name's allocation rather than
+        // allocating a fresh String for the override.
+        name.clone_into(&mut tun_config.name);
+    }
+    if let Some(mtu) = cfg.tun_mtu {
+        tun_config.mtu = mtu;
+    }
+    tun_config
+}
+
+/// Park the task on the OS shutdown signal. Used by the
+/// "TUN opened" branch of [`run_up_data_plane`].
+#[allow(
+    clippy::cognitive_complexity,
+    reason = "the function body is five lines (two log lines plus the await); clippy \
+              counts the .await's expansion inside the macro-typed tracing calls and \
+              the bibeam_runtime::shutdown_signal future as decision points. The \
+              hand-written control flow is one statement after another."
+)]
+async fn wait_for_shutdown_signal() -> Result<()> {
+    tracing::info!("up: data plane up; awaiting shutdown signal");
+    bibeam_runtime::shutdown_signal().await;
+    tracing::info!("up: shutdown signal received; exiting");
+    Ok(())
+}
+
+/// Run the SOCKS5 fallback listener until shutdown. F-CLI.8.
+async fn run_socks5_until_shutdown(cfg: &crate::config::Config) -> Result<()> {
+    let bind = crate::socks5_fallback::resolve_bind(cfg.socks5_bind.as_deref())?;
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let signal_cancel = cancel.clone();
+    let signal_handle = tokio::spawn(async move {
+        bibeam_runtime::shutdown_signal().await;
+        signal_cancel.cancel();
+    });
+    let result = crate::socks5_fallback::run_fallback(bind, cancel).await;
+    signal_handle.abort();
+    result
 }
 
 /// Resolve the invite string: prefer `--invite`, fall back to a
@@ -204,58 +286,26 @@ fn hex_encode(bytes: &[u8]) -> String {
     String::from_utf8(out).unwrap_or_default()
 }
 
-/// Probe the TUN setup once and route the three outcomes:
-/// successful open, typed `NoPrivilege` (F-CLI.8's fallback
-/// signal), or any other TUN failure (surfaced as an error).
-///
-/// Returns `Ok(())` for both "TUN opened" and "no privilege —
-/// SOCKS5 fallback would take over". The SOCKS5 path lands in
-/// F-CLI.8; this commit gives the dispatch path something real
-/// to do beyond logging.
-async fn probe_tun_or_fallback() -> Result<()> {
-    let tun_config = crate::tun_setup::TunSetupConfig::default();
-    let outcome = crate::tun_setup::setup_tun(&tun_config).await;
-    classify_tun_outcome(&tun_config, outcome)
-}
-
-/// Route a [`crate::tun_setup::setup_tun`] outcome into the
-/// dispatch contract. Kept as a free fn so the cognitive
-/// complexity of [`probe_tun_or_fallback`] stays flat for
-/// later F-CLI sub-items.
-fn classify_tun_outcome(
-    tun_config: &crate::tun_setup::TunSetupConfig,
-    outcome: Result<bibeam_tun::TunDevice, crate::tun_setup::TunSetupError>,
-) -> Result<()> {
-    match outcome {
-        Ok(_device) => {
-            log_tun_opened(tun_config);
-            Ok(())
-        },
-        Err(crate::tun_setup::TunSetupError::NoPrivilege { platform, help }) => {
-            log_no_privilege(platform, help);
-            Ok(())
-        },
-        Err(other) => Err(anyhow::Error::new(other).context("up: TUN setup failed")),
-    }
-}
-
-/// Log the "TUN opened" branch. Free fn so
-/// [`classify_tun_outcome`]'s match arms each shrink to one
+/// Log the "TUN opened" branch. Free fn so the `match` in
+/// [`run_up_data_plane`] each arm shrinks to a single
 /// expression — keeps the cognitive-complexity score under the
-/// 15-cap as F-CLI.3+ add more arms.
+/// 15-cap as later sub-items extend the dispatch.
 fn log_tun_opened(tun_config: &crate::tun_setup::TunSetupConfig) {
     tracing::info!(
         interface = %tun_config.name,
         mtu = tun_config.mtu,
-        "up: TUN device opened — bootstrap path lands in F-CLI.3+",
+        "up: TUN device opened — daemon entering parked mode",
     );
 }
 
-/// Log the "no privilege" branch the same way as
-/// [`log_tun_opened`]. F-CLI.8 will replace the body with the
-/// SOCKS5-fallback handoff.
+/// Log the "no privilege" branch. F-CLI.8 hands off to the
+/// SOCKS5 listener from this branch.
 fn log_no_privilege(platform: &'static str, help: &'static str) {
-    tracing::warn!(platform, help, "up: TUN setup denied — SOCKS5 fallback lands in F-CLI.8",);
+    tracing::warn!(
+        platform,
+        help,
+        "up: TUN setup denied — handing off to SOCKS5 fallback (F-CLI.8)",
+    );
 }
 
 /// `down` — placeholder; the kill-via-PID-file path lands together

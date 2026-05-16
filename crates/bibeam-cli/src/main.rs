@@ -7,6 +7,7 @@ mod ech;
 mod exit_pick;
 mod register;
 mod rotation;
+mod socks5_fallback;
 mod tun_setup;
 
 use anyhow::Result;
