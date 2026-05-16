@@ -63,7 +63,7 @@ pub enum AuditKind {
     Rotation,
     /// A PASETO session token was issued.
     TokenIssued,
-    /// An invite was redeemed via [`crate::invite_admission`].
+    /// An invite was redeemed via [`super::invite_admission`].
     InviteRedeemed,
 }
 
@@ -236,7 +236,7 @@ impl AuditLog {
     }
 
     /// Record an invite redemption. `audit_tag` is the breadcrumb
-    /// produced by [`crate::invite_admission::RedemptionBreadcrumb`].
+    /// produced by [`super::invite_admission::RedemptionBreadcrumb`].
     ///
     /// # Errors
     ///

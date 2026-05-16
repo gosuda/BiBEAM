@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/bibeam-core", "crates/bibeam-protocol", "crates/bibeam-crypto", "crates/bibeam-transport", "crates/bibeam-tun", "crates/bibeam-discovery", "crates/bibeam-runtime", "crates/bibeam-coordinator", "crates/bibeam-node", "crates/bibeam-cli", "crates/xtask"]
+members = ["crates/bibeam-core", "crates/bibeam-protocol", "crates/bibeam-crypto", "crates/bibeam-transport", "crates/bibeam-tun", "crates/bibeam-discovery", "crates/bibeam-runtime", "crates/bibeam-node", "crates/bibeam-cli", "crates/xtask"]
 default-members = ["crates/bibeam-cli"]
 
 [workspace.package]

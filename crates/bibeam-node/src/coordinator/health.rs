@@ -3,7 +3,7 @@
 //!
 //! F-COORD.1 already mounted the underlying
 //! [`bibeam_runtime::health_router`] inside
-//! [`crate::server::build_router`]. This module owns the
+//! [`super::server::build_router`]. This module owns the
 //! coordinator-specific *bring-up sequence* that decides when the
 //! latch flips to ready:
 //!
@@ -33,8 +33,8 @@ use std::sync::Arc;
 use bibeam_runtime::ReadyLatch;
 use thiserror::Error;
 
-use crate::cohorts::CohortStore;
-use crate::registry::PeerRegistry;
+use super::cohorts::CohortStore;
+use super::registry::PeerRegistry;
 
 /// Pre-condition bundle for [`flip_ready_when_bound`].
 ///

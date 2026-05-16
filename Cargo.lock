@@ -395,40 +395,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bibeam-coordinator"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "axum",
- "bibeam-core",
- "bibeam-crypto",
- "bibeam-discovery",
- "bibeam-protocol",
- "bibeam-runtime",
- "blake3",
- "clap",
- "dashmap",
- "governor",
- "mimalloc",
- "parking_lot",
- "pasetors",
- "postcard",
- "redb",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "ulid",
-]
-
-[[package]]
 name = "bibeam-core"
 version = "0.0.1"
 dependencies = [
@@ -502,6 +468,7 @@ name = "bibeam-node"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "axum",
  "bibeam-core",
  "bibeam-crypto",
  "bibeam-discovery",
@@ -509,15 +476,29 @@ dependencies = [
  "bibeam-runtime",
  "bibeam-transport",
  "bibeam-tun",
+ "blake3",
  "clap",
+ "dashmap",
  "fast-socks5",
+ "governor",
  "hickory-resolver",
  "mimalloc",
+ "parking_lot",
+ "pasetors",
+ "postcard",
+ "redb",
+ "serde",
+ "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
+ "time",
  "tokio",
  "tokio-util",
+ "tower",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
+ "ulid",
 ]
 
 [[package]]

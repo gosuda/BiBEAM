@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! redb-backed cohort assignments store (F-COORD.3).
 //!
-//! Where [`crate::registry`] tracks per-peer state, [`CohortStore`]
+//! Where [`super::registry`] tracks per-peer state, [`CohortStore`]
 //! tracks per-cohort state: which peers belong to a cohort, which
 //! exits serve it, and when the cohort must rotate. The matchmaker
 //! (F-COORD.5) reads + writes records here as it admits peers; the
@@ -13,7 +13,7 @@
 //! Single `cohorts` table; key is the cohort's 16-byte ULID,
 //! value is a postcard-encoded [`CohortRecord`]. The same
 //! `Arc<redb::Database>` shape as
-//! [`crate::registry::PeerRegistry`] — cheap to clone, opened once
+//! [`super::registry::PeerRegistry`] — cheap to clone, opened once
 //! per process.
 //!
 //! ## Eviction

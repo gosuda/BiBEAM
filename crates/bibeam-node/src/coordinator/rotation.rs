@@ -7,11 +7,11 @@
 //! tracked off-band (per-token byte counter in a future side
 //! table). Each tick the scheduler:
 //!
-//! 1. Evicts stale peers from [`crate::registry::PeerRegistry`]
+//! 1. Evicts stale peers from [`super::registry::PeerRegistry`]
 //!    (peers whose last heartbeat is older than the heartbeat SLO).
-//! 2. Evicts expired cohorts from [`crate::cohorts::CohortStore`]
+//! 2. Evicts expired cohorts from [`super::cohorts::CohortStore`]
 //!    (cohorts whose `rotation_deadline` has elapsed).
-//! 3. Re-enforces the [`crate::admission_gate::AdmissionGate`]
+//! 3. Re-enforces the [`super::admission_gate::AdmissionGate`]
 //!    floor by draining ready waiters against any cohort that has
 //!    cleared it since the last tick.
 //!
@@ -30,9 +30,9 @@ use bibeam_core::Timestamp;
 use tokio::time::{Instant, interval_at};
 use tokio_util::sync::CancellationToken;
 
-use crate::admission_gate::AdmissionGate;
-use crate::cohorts::{CohortStore, CohortStoreError};
-use crate::registry::{PeerRegistry, RegistryError};
+use super::admission_gate::AdmissionGate;
+use super::cohorts::{CohortStore, CohortStoreError};
+use super::registry::{PeerRegistry, RegistryError};
 
 /// Re-pool cadence: the wall-clock window between rotation ticks.
 /// 15 minutes per plan §2.
@@ -251,8 +251,8 @@ mod tests {
     use core::net::{IpAddr, Ipv4Addr, SocketAddr};
     use time::Duration as TimeDuration;
 
-    use crate::admission_gate::AdmissionOutcome;
-    use crate::cohorts::CohortRecord;
+    use crate::coordinator::admission_gate::AdmissionOutcome;
+    use crate::coordinator::cohorts::CohortRecord;
 
     fn fixture_registry() -> (Arc<PeerRegistry>, tempfile::NamedTempFile) {
         let temp = tempfile::NamedTempFile::new().expect("registry tempfile");

@@ -17,13 +17,13 @@
 
 use std::sync::Arc;
 
-use bibeam_coordinator::admission::Admissioner;
-use bibeam_coordinator::admission_gate::{AdmissionGate, AdmissionOutcome};
-use bibeam_coordinator::cohorts::{CohortRecord, CohortStore};
-use bibeam_coordinator::registry::PeerRegistry;
 use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use bibeam_crypto::{PasetoIssuer, PasetoVerifier};
 use bibeam_discovery::PeerRecord;
+use bibeam_node::coordinator::admission::Admissioner;
+use bibeam_node::coordinator::admission_gate::{AdmissionGate, AdmissionOutcome};
+use bibeam_node::coordinator::cohorts::{CohortRecord, CohortStore};
+use bibeam_node::coordinator::registry::PeerRegistry;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::version4::V4;

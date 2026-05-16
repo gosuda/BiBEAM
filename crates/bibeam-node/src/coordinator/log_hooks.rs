@@ -17,9 +17,15 @@
 //!     2. emits a `tracing::info!` record carrying the redacted
 //!        tokens (so the JSON log stream stays operator-readable
 //!        but PII-clean), and
-//!     3. forwards an [`crate::audit::AuditEntry`] into the
-//!        supplied [`crate::audit::AuditLog`] for the operator
+//!     3. forwards an [`super::audit::AuditEntry`] into the
+//!        supplied [`super::audit::AuditLog`] for the operator
 //!        audit trail.
+//!
+//! Note: the macro is `#[macro_export]`ed at the crate root, so
+//! [`crate::audit_event!`] remains the call-site path; the body of
+//! the macro routes through `$crate::coordinator::…` because the
+//! coord sources now live as a sub-module of `bibeam-node` per
+//! §11 R-1.
 //!
 //! ## Why a macro
 //!
@@ -39,7 +45,8 @@ use bibeam_core::{PeerId, RedactionKey, redact_ip, redact_peer_id};
 ///
 /// Thin wrapper around [`bibeam_core::redact_peer_id`] so call
 /// sites import a coordinator-local symbol and the
-/// [`crate::audit_event!`] macro has a stable function name to invoke.
+/// [`crate::audit_event!`] macro (defined at the crate root via
+/// `#[macro_export]`) has a stable function name to invoke.
 #[must_use]
 pub fn peer_token(key: &RedactionKey, peer_id: &PeerId) -> String {
     redact_peer_id(key, peer_id)
@@ -58,8 +65,8 @@ pub fn ip_token(key: &RedactionKey, source_ip: IpAddr) -> String {
 /// Shape (all arguments are required except where noted):
 ///
 /// ```ignore
-/// use bibeam_coordinator::audit_event;
-/// use bibeam_coordinator::audit::AuditKind;
+/// use bibeam_node::audit_event;
+/// use bibeam_node::coordinator::audit::AuditKind;
 ///
 /// audit_event!(
 ///     audit_log: &audit_log,
@@ -82,7 +89,7 @@ pub fn ip_token(key: &RedactionKey, source_ip: IpAddr) -> String {
 ///   The target string is well-known so a log aggregator can
 ///   filter the audit stream out of general tracing without
 ///   string-sniffing.
-/// - Pushes an [`crate::audit::AuditEntry`] into `audit_log`. The
+/// - Pushes an [`super::audit::AuditEntry`] into `audit_log`. The
 ///   detail JSON is whatever the caller supplied.
 ///
 /// Errors from `audit_log.append` are surfaced via
@@ -100,21 +107,23 @@ macro_rules! audit_event {
         detail: $detail:expr,
         message: $message:literal $(,)?
     ) => {{
-        let __redaction_key: &$crate::log_hooks::__exports::RedactionKey = $redaction_key;
+        let __redaction_key: &$crate::coordinator::log_hooks::__exports::RedactionKey =
+            $redaction_key;
         let __peer_token =
-            $crate::log_hooks::peer_token(__redaction_key, $peer_id);
-        let __ip_token = $crate::log_hooks::ip_token(__redaction_key, $ip);
-        let __kind: $crate::audit::AuditKind = $kind;
+            $crate::coordinator::log_hooks::peer_token(__redaction_key, $peer_id);
+        let __ip_token =
+            $crate::coordinator::log_hooks::ip_token(__redaction_key, $ip);
+        let __kind: $crate::coordinator::audit::AuditKind = $kind;
         let __detail: String = $detail;
         ::tracing::info!(
-            target: $crate::log_hooks::AUDIT_LOG_TARGET,
+            target: $crate::coordinator::log_hooks::AUDIT_LOG_TARGET,
             peer_id = %__peer_token,
             ip = %__ip_token,
             kind = ?__kind,
             $message,
         );
-        let __entry = $crate::audit::AuditEntry {
-            at: $crate::log_hooks::__exports::Timestamp::now(),
+        let __entry = $crate::coordinator::audit::AuditEntry {
+            at: $crate::coordinator::log_hooks::__exports::Timestamp::now(),
             kind: __kind,
             peer_token: Some(__peer_token),
             ip_token: Some(__ip_token),
@@ -122,7 +131,7 @@ macro_rules! audit_event {
         };
         if let Err(__err) = $audit_log.append(&__entry) {
             ::tracing::error!(
-                target: $crate::log_hooks::AUDIT_LOG_TARGET,
+                target: $crate::coordinator::log_hooks::AUDIT_LOG_TARGET,
                 error = %__err,
                 "audit_event! failed to append audit-log entry",
             );
@@ -131,6 +140,10 @@ macro_rules! audit_event {
 }
 
 /// Tracing target used by the [`crate::audit_event!`] macro's emit.
+///
+/// The macro is `#[macro_export]`ed at the crate root, so the
+/// call-site path stays `crate::audit_event!` even though the
+/// helpers live under `crate::coordinator::log_hooks`.
 ///
 /// Reserved so a downstream log aggregator can filter the audit
 /// stream into a separate sink without string-matching on message
@@ -147,7 +160,7 @@ pub mod __exports {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audit::{AuditKind, AuditLog};
+    use crate::coordinator::audit::{AuditKind, AuditLog};
     use bibeam_core::{PeerId, Timestamp};
     use core::net::Ipv4Addr;
     use std::sync::Arc;
@@ -196,7 +209,7 @@ mod tests {
         key: &Arc<RedactionKey>,
         peer: PeerId,
         ip: IpAddr,
-    ) -> (crate::audit::AuditEntry, Timestamp, Timestamp) {
+    ) -> (crate::coordinator::audit::AuditEntry, Timestamp, Timestamp) {
         let detail = String::from("{\"smoke\": true}");
         let before = Timestamp::now();
         crate::audit_event!(
@@ -218,7 +231,7 @@ mod tests {
     /// Assert that the entry's redacted tokens match the
     /// expected helper outputs for `(peer, ip)` under `key`.
     fn assert_tokens_match(
-        entry: &crate::audit::AuditEntry,
+        entry: &crate::coordinator::audit::AuditEntry,
         key: &RedactionKey,
         peer: PeerId,
         ip: IpAddr,

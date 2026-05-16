@@ -17,7 +17,7 @@
 //! - `exp`: the cohort's `rotation_deadline` — the moment the peer
 //!   must re-register and pick up a fresh token.
 //! - `exit_set`: the cohort's canonical exit list, copied verbatim
-//!   from [`crate::cohorts::CohortRecord::exits`].
+//!   from [`super::cohorts::CohortRecord::exits`].
 //!
 //! Peers re-register on rotation to pick up the next token, so
 //! tying the token's expiry to the cohort's rotation deadline is
@@ -38,7 +38,7 @@ use bibeam_crypto::{PasetoIssuer, TokenError};
 use bibeam_protocol::SessionClaims;
 use thiserror::Error;
 
-use crate::cohorts::CohortRecord;
+use super::cohorts::CohortRecord;
 
 /// Failure modes for [`Admissioner::issue`].
 #[derive(Debug, Error)]

@@ -40,7 +40,7 @@ use bibeam_core::{CohortId, PeerId, Timestamp};
 use bibeam_protocol::control::MatchResponse;
 use parking_lot::Mutex;
 
-use crate::cohorts::CohortRecord;
+use super::cohorts::CohortRecord;
 
 /// Outcome of a single [`AdmissionGate::admit_or_bucket`] call.
 #[derive(Debug)]

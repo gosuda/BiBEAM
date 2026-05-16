@@ -1,16 +1,16 @@
-#![forbid(unsafe_code)]
-#![doc = include_str!("../README.md")]
-
-//! Library entry point for the `bibeam-coordinator` daemon.
+//! Control-plane (coordinator) sub-module of the `bibeam-node` daemon.
+//!
+//! Previously the standalone `bibeam-coordinator` crate; dissolved
+//! into `bibeam-node` per §11 R-1 so a single binary services both
+//! data-plane (relay / exit / forwarder) and control-plane
+//! (rendezvous / admission / rotation) roles, gated by the
+//! `is_coordinator` config flag.
 //!
 //! The coordinator is the rendezvous + matchmaker service. Peers POST
 //! [`bibeam_protocol::control::Register`] / `MatchRequest` /
 //! `Heartbeat` / `Disconnect` to the routes mounted by
 //! [`server::build_router`], and subscribe to a coordinator-pushed
-//! event stream over WebSocket. This crate also exposes the daemon as
-//! a binary; `main.rs` is a thin shim that calls into this library so
-//! the routes and storage primitives are reachable from integration
-//! tests under `tests/`.
+//! event stream over WebSocket.
 
 pub mod admission;
 pub mod admission_gate;
