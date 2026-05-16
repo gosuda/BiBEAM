@@ -49,6 +49,10 @@ pub enum DiscoveryError {
     /// client only.
     #[error("JSON codec error: {0}")]
     Json(#[from] serde_json::Error),
+    /// `tokio_tungstenite` failed during a WebSocket upgrade or while
+    /// pumping frames.
+    #[error("WebSocket error: {0}")]
+    Ws(#[from] tokio_tungstenite::tungstenite::Error),
     /// `url::Url::join` failed to combine the coordinator base URL
     /// with the per-call path suffix, or the constructor was handed a
     /// URL that cannot serve as a base.
@@ -63,12 +67,15 @@ impl DiscoveryError {
     /// when another coordinator might return a different result.
     /// Transport-level failures (timeouts, refused connections, DNS,
     /// TLS) and 5xx responses are retriable; 4xx and codec failures
-    /// are not.
+    /// are not. WebSocket I/O and TLS-handshake errors are retriable;
+    /// clean remote closes, caller-state bugs, protocol violations,
+    /// and message-codec errors are not.
     #[must_use]
     pub fn is_retriable(&self) -> bool {
         match self {
             Self::HttpTransport(err) => is_transport_retriable(err),
             Self::HttpStatus { status, .. } => *status >= 500,
+            Self::Ws(err) => is_ws_retriable(err),
             Self::Json(_) | Self::Url(_) => false,
         }
     }
@@ -81,6 +88,21 @@ impl DiscoveryError {
 /// coordinator would round-trip the same broken bytes.
 fn is_transport_retriable(err: &reqwest::Error) -> bool {
     err.is_timeout() || err.is_connect() || err.is_request()
+}
+
+/// Classify a [`tokio_tungstenite::tungstenite::Error`] as retriable.
+///
+/// Only underlying I/O and TLS-handshake errors are retriable:
+/// another coordinator with the same DNS / TLS posture might still
+/// answer. `ConnectionClosed` is a clean remote close — surfacing it
+/// as retriable would mask a coordinator's deliberate shutdown.
+/// `AlreadyClosed` is a caller-state bug (using the socket after
+/// close); retrying would mask it. HTTP-handshake errors, protocol
+/// violations, and message-codec errors would repeat verbatim against
+/// the next coordinator and are not retriable either.
+const fn is_ws_retriable(err: &tokio_tungstenite::tungstenite::Error) -> bool {
+    use tokio_tungstenite::tungstenite::Error as WsErr;
+    matches!(err, WsErr::Io(_) | WsErr::Tls(_))
 }
 
 #[cfg(test)]
