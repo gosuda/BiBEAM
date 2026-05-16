@@ -44,11 +44,19 @@
 //! `arc_swap::ArcSwap` so the active cohort can be swapped atomically
 //! and lock-free; in-flight readers hold an [`std::sync::Arc`] clone
 //! and drain naturally as the old cohort's refcount falls to zero.
+//!
+//! The [`quic_server`] sub-module wraps a [`quinn::Endpoint`] in a
+//! cancel-aware inbound-accept loop (F-NODE.2). Per-connection
+//! business logic — cohort-traffic relay, WG-datagram-forward, and
+//! future protocols — plugs in via the
+//! [`quic_server::AcceptHandler`] trait so the loop primitive stays
+//! protocol-agnostic.
 
 pub mod coordinator;
 pub mod dns;
 pub mod exit_mode;
 pub mod forwarder;
+pub mod quic_server;
 pub mod rate_limit;
 pub mod rotation_handler;
 pub mod telemetry;

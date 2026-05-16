@@ -63,12 +63,21 @@ async-trait = { workspace = true }
 # --- F-NODE.6 rotation handler: lock-free atomic swap of `Arc<CohortLive>`
 # on `CohortRotated` events; consumed by `rotation_handler::RotationHandler`. ---
 arc-swap = { workspace = true }
+# --- F-NODE.2 Quinn server accept loop: wraps a `quinn::Endpoint` per-connection
+# handler in a cancel-aware loop. Cohort-traffic relay + WG-datagram-forward
+# share this primitive as the inbound surface. ---
+quinn = { workspace = true }
 
 [dev-dependencies]
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---
 pasetors = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+# --- F-NODE.2 in-process accept-loop tests: mint a self-signed cert for the
+# `quinn::Endpoint::server` bind + the in-process `quinn` client that drives
+# the loop. Production cert provisioning is F-TRANS.2's concern. ---
+rcgen = { workspace = true }
+rustls = { workspace = true }
 
 [lints]
 workspace = true
