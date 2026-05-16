@@ -2,6 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 mod cli;
+mod config;
 mod exit_pick;
 mod register;
 mod rotation;

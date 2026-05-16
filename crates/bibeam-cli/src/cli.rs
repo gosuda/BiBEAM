@@ -114,18 +114,12 @@ pub(crate) async fn dispatch(cli: Cli) -> Result<()> {
     }
 }
 
-/// `init` — placeholder; F-CLI.6 wires the real config-write.
-#[allow(
-    clippy::unused_async,
-    reason = "async-shaped to keep the dispatch table uniform; F-CLI.6 will introduce \
-              filesystem I/O here and benefit from staying inside the tokio runtime."
-)]
+/// `init` — write a default config at the platform-standard
+/// path (or the override). Delegates to
+/// [`crate::config::run_init`] so the cli dispatch table stays
+/// compact.
 async fn handle_init(config_override: Option<&std::path::Path>) -> Result<()> {
-    tracing::info!(
-        config_override = ?config_override,
-        "init: scaffold subcommand — config-write lands in F-CLI.6",
-    );
-    Ok(())
+    crate::config::run_init(config_override).await
 }
 
 /// `up` — partial; F-CLI.2 wires the privilege-guarded TUN
@@ -294,19 +288,10 @@ async fn handle_status(config_override: Option<&std::path::Path>) -> Result<()> 
     Ok(())
 }
 
-/// `config` — placeholder; F-CLI.6 wires the figment loader and
-/// prints the merged value.
-#[allow(
-    clippy::unused_async,
-    reason = "async-shaped to keep the dispatch table uniform; F-CLI.6 may add file I/O \
-              here and benefit from staying inside the tokio runtime."
-)]
+/// `config` — print the resolved config (post-figment merge).
+/// Delegates to [`crate::config::run_config`].
 async fn handle_config(config_override: Option<&std::path::Path>) -> Result<()> {
-    tracing::info!(
-        config_override = ?config_override,
-        "config: scaffold subcommand — resolved-config print lands in F-CLI.6",
-    );
-    Ok(())
+    crate::config::run_config(config_override).await
 }
 
 /// `version` — emits the package version to stdout. Stdout is
@@ -407,11 +392,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn dispatch_init_is_idempotent_today() {
-        // Contract: the scaffold handler returns Ok and does not
-        // mutate any external state. F-CLI.6 will tighten this
-        // contract once the real handler lands.
-        let cli = Cli::try_parse_from(["bibeam", "init"]).expect("init must parse");
-        dispatch(cli).await.expect("init scaffold must return Ok");
+    async fn dispatch_init_writes_into_supplied_config_path() {
+        // Contract: F-CLI.6's init handler writes the default
+        // TOML to the path the operator supplies via --config.
+        // A regression that ignored the override would mutate
+        // the real ~/.config/bibeam/config.toml during tests —
+        // that's the failure mode this test guards against.
+        let salt: u64 = rand::random();
+        let target = std::env::temp_dir().join(format!("bibeam-cli-init-{salt:016x}.toml"));
+        // Ensure the path does not pre-exist (a stale leftover
+        // would trip the non-overwrite guard in F-CLI.6).
+        drop(std::fs::remove_file(&target));
+        let target_str = target.to_string_lossy().into_owned();
+        let cli = Cli::try_parse_from(["bibeam", "--config", &target_str, "init"])
+            .expect("init must parse");
+        dispatch(cli).await.expect("init handler must return Ok");
+        let body = std::fs::read_to_string(&target).expect("init must have written the target");
+        assert!(body.contains("bibeam-cli"));
+        // Cleanup.
+        drop(std::fs::remove_file(&target));
     }
 }

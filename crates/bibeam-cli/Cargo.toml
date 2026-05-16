@@ -33,6 +33,8 @@ rand = { workspace = true }               # fresh per-seal nonce for the on-disk
 directories = { workspace = true }        # platform-standard config_dir resolution for state.key / state/session.bin
 blake3 = { workspace = true }             # 64-bit issuer-fingerprint preview in log lines
 tokio-util = { workspace = true }         # CancellationToken for the F-CLI.5 rotation loop
+serde = { workspace = true }              # typed config struct loaded via figment (F-CLI.6)
+toml = { workspace = true }               # `config` subcommand renders the resolved config as TOML for operator inspection (F-CLI.6)
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] } # virtual-time test fixtures for rotation_loop (start_paused)
