@@ -435,12 +435,14 @@ dependencies = [
 name = "bibeam-transport"
 version = "0.0.1"
 dependencies = [
+ "base64",
  "bibeam-core",
  "bibeam-crypto",
  "bibeam-protocol",
  "boringtun",
  "bytes",
  "futures-util",
+ "ipnet",
  "parking_lot",
  "rustls",
  "thiserror 2.0.18",
