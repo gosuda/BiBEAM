@@ -37,7 +37,6 @@ mimalloc = { workspace = true }
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---
 axum = { workspace = true }
 tower = { workspace = true }
-tower-http = { workspace = true }
 redb = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -47,7 +46,6 @@ blake3 = { workspace = true }
 ulid = { workspace = true }
 governor = { workspace = true }
 parking_lot = { workspace = true }
-dashmap = { workspace = true }
 # --- GeoIP cross-check (R-REGION.2 / D-5): operator-supplied GeoLite2-Country DB ---
 maxminddb = { workspace = true }
 # --- multi-hop path-assembly (R-MULTIHOP-COORD) — WgPeerConfig.allowed_ips uses IpNet;
@@ -67,4 +65,4 @@ tokio = { workspace = true, features = ["test-util"] }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "hickory-resolver", "thiserror", "mimalloc", "axum", "tower", "tower-http", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot", "dashmap"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "hickory-resolver", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot"]
