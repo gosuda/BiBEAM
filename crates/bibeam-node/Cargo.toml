@@ -65,4 +65,4 @@ tokio = { workspace = true, features = ["test-util"] }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "hickory-resolver", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot"]
