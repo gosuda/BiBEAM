@@ -447,6 +447,7 @@ dependencies = [
  "rand 0.10.1",
  "rustls",
  "thiserror 2.0.18",
+ "time",
  "tokio",
  "tokio-util",
  "tracing",
