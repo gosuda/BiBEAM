@@ -96,6 +96,11 @@ impl Admissioner {
             cohort: cohort_id,
             exp: cohort.rotation_deadline,
             exit_set: cohort.exits.clone(),
+            // Phase 1 issues single-hop tokens only; the path
+            // collapses to the cohort's first exit. R-MULTIHOP-COORD
+            // will replace this with the coordinator's path-assembly
+            // output.
+            path: cohort.exits.iter().take(1).copied().collect(),
         };
         let token = self.issuer.issue(&claims)?;
         Ok(token)

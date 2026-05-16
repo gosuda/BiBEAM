@@ -171,11 +171,16 @@ mod tests {
 
     fn fixture_claims() -> SessionClaims {
         let exp = OffsetDateTime::now_utc() + time::Duration::hours(1);
+        let first_exit = NodeId::new();
+        let second_exit = NodeId::new();
         SessionClaims {
             sub: PeerId::new(),
             cohort: CohortId::new(),
             exp: Timestamp::from_offset_date_time(exp),
-            exit_set: vec![NodeId::new(), NodeId::new()],
+            exit_set: vec![first_exit, second_exit],
+            // Single-hop fixture: path collapses to one exit, which
+            // is a member of exit_set (issuer-side invariant).
+            path: vec![first_exit],
         }
     }
 

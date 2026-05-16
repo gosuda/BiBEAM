@@ -22,8 +22,12 @@
 //!    peer trusts.
 //! 4. Send `/api/v1/match` bearing the verified session token. The
 //!    coordinator answers with a
-//!    [`bibeam_protocol::control::MatchResponse`] naming the peer's
-//!    cohort, exit set, and rotation deadline.
+//!    [`bibeam_protocol::control::MatchResponse`]; the bootstrap
+//!    extracts the single-hop branch
+//!    ([`bibeam_protocol::control::MatchResponse::SingleHop`])
+//!    naming the peer's cohort, exit set, and rotation deadline.
+//!    Multi-hop responses surface as a typed error until
+//!    R-MULTIHOP-CLI wires the client side.
 //! 5. Assemble a partial [`CohortLive`] snapshot from the verified
 //!    claims and the match response. Full cohort membership lands
 //!    later via [`crate::CoordinatorEvent::CohortAssigned`] on the
@@ -220,10 +224,26 @@ impl SessionBootstrap {
         };
         let match_response = chosen_client.match_(&match_request, &session_token).await?;
 
+        // R-MULTIHOP-PROTO only landed the wire shapes; the multi-hop
+        // bootstrap flow (R-MULTIHOP-CLI) is a later commit. Until
+        // then, only the single-hop variant has a meaningful
+        // bootstrap outcome; a multi-hop assignment surfaces as a
+        // typed error so the caller can route around it.
+        let single_hop = match match_response {
+            bibeam_protocol::MatchResponse::SingleHop(single_hop) => single_hop,
+            bibeam_protocol::MatchResponse::MultiHopAssignment(_) => {
+                return Err(DiscoveryError::Url(
+                    "coordinator returned a multi-hop assignment; \
+                     client-side multi-hop bootstrap is not yet wired \
+                     (R-MULTIHOP-CLI)"
+                        .into(),
+                ));
+            },
+        };
         let cohort_live = CohortLive {
-            cohort: match_response.cohort,
+            cohort: single_hop.cohort,
             members: Vec::new(),
-            exits: match_response.exit_set,
+            exits: single_hop.exit_set,
             // TODO(R-REGION.3): once the coordinator's
             // `MatchResponse` carries per-exit region tags, populate
             // `exit_regions` from the response here so the client's

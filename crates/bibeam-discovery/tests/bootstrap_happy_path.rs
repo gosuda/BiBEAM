@@ -31,7 +31,9 @@ use bibeam_crypto::{IdentitySecretKey, PasetoIssuer, PasetoVerifier};
 use bibeam_discovery::invite_validator::{SignedInvite, signing_payload};
 use bibeam_discovery::{CoordinatorClient, CoordinatorPool, PeerProfile, SessionBootstrap};
 use bibeam_protocol::claims::SessionClaims;
-use bibeam_protocol::control::{MatchRequest, MatchResponse, Register, RegisterAck};
+use bibeam_protocol::control::{
+    MatchRequest, MatchResponse, Register, RegisterAck, SingleHopMatch,
+};
 use bytes::Bytes;
 use pasetors::keys::{AsymmetricKeyPair, Generate as _};
 use pasetors::version4::V4;
@@ -96,7 +98,11 @@ async fn register_handler(
         sub: request.peer_id,
         cohort: state.cohort,
         exp,
-        exit_set: state.exit_set,
+        exit_set: state.exit_set.clone(),
+        // Single-hop test fixture: the path collapses to the chosen
+        // exit. R-MULTIHOP-PROTO landed the wire shape; the
+        // bootstrap test still drives the pre-multihop happy path.
+        path: state.exit_set.iter().take(1).copied().collect(),
     };
     let token = state
         .issuer
@@ -126,11 +132,11 @@ async fn match_handler(
         return Err((StatusCode::BAD_REQUEST, "peer mismatch".into()));
     }
     let deadline = time::OffsetDateTime::now_utc() + time::Duration::hours(1);
-    Ok(Json(MatchResponse {
+    Ok(Json(MatchResponse::SingleHop(SingleHopMatch {
         cohort: state.cohort,
         exit_set: state.exit_set,
         rotation_deadline: Timestamp::from_offset_date_time(deadline),
-    }))
+    })))
 }
 
 /// Generate a self-signed cert for `localhost`. Returns the

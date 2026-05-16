@@ -23,6 +23,8 @@ use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
+use crate::multihop::{ForwarderLease, MultiHopAssignmentError, WgPeerConfig};
+
 /// Initial registration message a peer sends to the coordinator.
 ///
 /// `addr_hint` is the address the peer advertises for inbound
@@ -71,20 +73,114 @@ pub struct MatchRequest {
     pub at: Timestamp,
 }
 
-/// Coordinator's response to a [`MatchRequest`].
+/// Single-hop match: cohort + canonical exit set + rotation deadline.
 ///
 /// `cohort` identifies the cohort the peer should join. `exit_set` is
 /// the canonical list of exit nodes for that cohort; the peer should
 /// route through one of them. `rotation_deadline` tells the peer when
 /// it must request a fresh cohort.
+///
+/// This is the pre-multihop shape — the peer routes directly to one
+/// of the listed exits without an intermediate forwarder chain. Lives
+/// inside the [`MatchResponse::SingleHop`] variant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MatchResponse {
+pub struct SingleHopMatch {
     /// Cohort the peer should join.
     pub cohort: CohortId,
     /// Exit nodes serving traffic for `cohort`.
     pub exit_set: Vec<NodeId>,
     /// Wall-clock instant at which the peer must rotate.
     pub rotation_deadline: Timestamp,
+}
+
+/// Multi-hop match: client routes through a chain of forwarders to an
+/// exit (R-MULTIHOP-PROTO).
+///
+/// Carries everything the client needs to bring its `WireGuard` session
+/// up — the public side of the client↔exit session plus the
+/// per-forwarder lease rows the forwarders need to authorise the
+/// relayed packets.
+///
+/// # Structural invariants (unrepresentable invalid states)
+///
+/// - **Non-empty chain.** [`Self::forwarder_chain`] holds at least one
+///   [`ForwarderLease`]; multi-hop with zero forwarders is by
+///   definition the single-hop case, which lives in
+///   [`MatchResponse::SingleHop`]. Validated on deserialize via a
+///   `serde(try_from = ...)` shim that surfaces an empty chain as a
+///   [`MultiHopAssignmentError::EmptyChain`] inside the standard
+///   postcard / serde error path.
+/// - **Forwarder ↔ lease binding by construction.** Each chain entry
+///   IS a [`ForwarderLease`], so the [`ForwarderLease::forwarder`]
+///   `NodeId` and its lease row are one element — no parallel `Vec`s,
+///   no positional-alignment bug surface. The flow direction is the
+///   `Vec`'s order: traffic enters `forwarder_chain[0]`, hops through
+///   each successor, and exits the chain at `forwarder_chain[last]`'s
+///   downstream socket (which terminates on [`Self::exit`]).
+///
+/// See [`crate::multihop`] for the on-the-wire packet-to-lease binding
+/// mechanism (chosen: option (B), explicit relay framing).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "MultiHopAssignmentWire")]
+pub struct MultiHopAssignment {
+    /// Final exit serving the client's traffic.
+    pub exit: NodeId,
+    /// Ordered forwarder chain between the client and `exit`.
+    ///
+    /// The client sends its outbound `WireGuard` packets to
+    /// `forwarder_chain[0]`'s upstream socket; each forwarder relays
+    /// to the next; the last entry relays to `exit`. Non-empty by
+    /// construction — see the type-level invariants section.
+    pub forwarder_chain: Vec<ForwarderLease>,
+    /// Client-facing `WireGuard` peer config for the client↔exit
+    /// session.
+    pub client_wg_config: WgPeerConfig,
+}
+
+/// Wire-shape twin of [`MultiHopAssignment`].
+///
+/// `serde` deserialises every [`MatchResponse::MultiHopAssignment`]
+/// frame into this shape first, then runs [`Self::try_into`]; if the
+/// resulting [`MultiHopAssignment`] would violate a structural
+/// invariant (currently: empty `forwarder_chain`), the conversion
+/// surfaces a [`MultiHopAssignmentError`] which serde reports as a
+/// deserialize failure. The two types share the same on-the-wire
+/// layout because the field set and order match.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct MultiHopAssignmentWire {
+    pub exit: NodeId,
+    pub forwarder_chain: Vec<ForwarderLease>,
+    pub client_wg_config: WgPeerConfig,
+}
+
+impl TryFrom<MultiHopAssignmentWire> for MultiHopAssignment {
+    type Error = MultiHopAssignmentError;
+
+    fn try_from(wire: MultiHopAssignmentWire) -> Result<Self, Self::Error> {
+        if wire.forwarder_chain.is_empty() {
+            return Err(MultiHopAssignmentError::EmptyChain);
+        }
+        Ok(Self {
+            exit: wire.exit,
+            forwarder_chain: wire.forwarder_chain,
+            client_wg_config: wire.client_wg_config,
+        })
+    }
+}
+
+/// Coordinator's response to a [`MatchRequest`].
+///
+/// Two shapes — the direct single-hop case ([`MatchResponse::SingleHop`])
+/// and the multi-hop case ([`MatchResponse::MultiHopAssignment`]) — share
+/// one variant family so the wire shape stays a single tagged sum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MatchResponse {
+    /// Direct single-hop assignment: peer routes straight to one of
+    /// the cohort's exit nodes.
+    SingleHop(SingleHopMatch),
+    /// Multi-hop assignment: peer routes through a chain of forwarders
+    /// before reaching the exit.
+    MultiHopAssignment(MultiHopAssignment),
 }
 
 /// Peer-to-coordinator keep-alive.

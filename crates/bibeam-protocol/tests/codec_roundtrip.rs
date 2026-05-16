@@ -1,4 +1,9 @@
 #![forbid(unsafe_code)]
+#![allow(
+    clippy::expect_used,
+    reason = "integration-test strategies use `.expect(...)` for well-known constants; clippy.toml \
+              already permits expect in tests"
+)]
 //! Proptest roundtrip for the wire codec.
 //!
 //! For any [`Frame`] value reachable by the per-variant strategies in this
@@ -9,12 +14,14 @@
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
-use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
+use bibeam_core::{ChainId, CohortId, NodeId, PeerId, Timestamp};
 use bibeam_protocol::{
-    CohortAdmit, CohortLive, CohortMessage, CohortRotate, ControlMessage, Disconnect, Frame,
-    Heartbeat, MatchRequest, MatchResponse, Register, RegisterAck, Tunnel, decode, encode,
+    CohortAdmit, CohortLive, CohortMessage, CohortRotate, ControlMessage, Disconnect,
+    ForwarderLease, Frame, Heartbeat, MatchRequest, MatchResponse, MultiHopAssignment, Register,
+    RegisterAck, SingleHopMatch, Tunnel, WG_KEY_LEN, WgPeerConfig, WgPublicKey, decode, encode,
 };
 use bytes::Bytes;
+use ipnet::IpNet;
 use proptest::collection::vec;
 use proptest::prelude::*;
 use time::{Duration, OffsetDateTime};
@@ -33,6 +40,11 @@ fn arb_node_id() -> impl Strategy<Value = NodeId> {
 /// Strategy producing an arbitrary [`CohortId`] from 16 random bytes.
 fn arb_cohort_id() -> impl Strategy<Value = CohortId> {
     any::<[u8; 16]>().prop_map(|bytes| CohortId(Ulid::from_bytes(bytes)))
+}
+
+/// Strategy producing an arbitrary [`ChainId`] from 16 random bytes.
+fn arb_chain_id() -> impl Strategy<Value = ChainId> {
+    any::<[u8; 16]>().prop_map(|bytes| ChainId(Ulid::from_bytes(bytes)))
 }
 
 /// Strategy producing an arbitrary RFC 3339-serialisable [`Timestamp`].
@@ -83,14 +95,89 @@ fn arb_match_request() -> impl Strategy<Value = MatchRequest> {
     (arb_peer_id(), arb_timestamp()).prop_map(|(peer_id, at)| MatchRequest { peer_id, at })
 }
 
-fn arb_match_response() -> impl Strategy<Value = MatchResponse> {
+fn arb_single_hop_match() -> impl Strategy<Value = SingleHopMatch> {
     (arb_cohort_id(), vec(arb_node_id(), 0..8), arb_timestamp()).prop_map(
-        |(cohort, exit_set, rotation_deadline)| MatchResponse {
+        |(cohort, exit_set, rotation_deadline)| SingleHopMatch {
             cohort,
             exit_set,
             rotation_deadline,
         },
     )
+}
+
+fn arb_wg_public_key() -> impl Strategy<Value = WgPublicKey> {
+    any::<[u8; WG_KEY_LEN]>().prop_map(WgPublicKey::from_bytes)
+}
+
+fn arb_ipnet() -> impl Strategy<Value = IpNet> {
+    prop_oneof![
+        Just("0.0.0.0/0".parse::<IpNet>().expect("parse v4 cidr")),
+        Just("::/0".parse::<IpNet>().expect("parse v6 cidr")),
+        Just("10.0.0.0/8".parse::<IpNet>().expect("parse v4 private cidr")),
+    ]
+}
+
+fn arb_wg_peer_config() -> impl Strategy<Value = WgPeerConfig> {
+    (
+        arb_wg_public_key(),
+        arb_wg_public_key(),
+        arb_socket_addr(),
+        vec(arb_ipnet(), 0..4),
+        any::<u16>(),
+    )
+        .prop_map(
+            |(
+                local_static_public,
+                peer_static_public,
+                peer_endpoint,
+                allowed_ips,
+                persistent_keepalive_secs,
+            )| WgPeerConfig {
+                local_static_public,
+                peer_static_public,
+                peer_endpoint,
+                allowed_ips,
+                persistent_keepalive_secs,
+            },
+        )
+}
+
+fn arb_forwarder_lease() -> impl Strategy<Value = ForwarderLease> {
+    (
+        arb_node_id(),
+        arb_chain_id(),
+        arb_socket_addr(),
+        arb_socket_addr(),
+        arb_timestamp(),
+    )
+        .prop_map(|(forwarder, chain_id, allowed_src, allowed_dst, lease_expires_at)| {
+            ForwarderLease {
+                forwarder,
+                chain_id,
+                allowed_src,
+                allowed_dst,
+                lease_expires_at,
+            }
+        })
+}
+
+fn arb_multi_hop_assignment() -> impl Strategy<Value = MultiHopAssignment> {
+    // Chain is at least 1 element by structural invariant (validated
+    // on deserialize); the strategy must respect that.
+    (arb_node_id(), vec(arb_forwarder_lease(), 1..4), arb_wg_peer_config()).prop_map(
+        |(exit, forwarder_chain, client_wg_config)| MultiHopAssignment {
+            exit,
+            forwarder_chain,
+            client_wg_config,
+        },
+    )
+}
+
+fn arb_match_response() -> impl Strategy<Value = MatchResponse> {
+    prop_oneof![
+        arb_single_hop_match().prop_map(MatchResponse::SingleHop),
+        arb_multi_hop_assignment().prop_map(MatchResponse::MultiHopAssignment),
+    ]
 }
 
 fn arb_heartbeat() -> impl Strategy<Value = Heartbeat> {

@@ -14,6 +14,15 @@ serde = { workspace = true }
 postcard = { workspace = true }
 thiserror = { workspace = true }
 bytes = { workspace = true, features = ["serde"] }
+# `ipnet`'s `serde` feature enables the postcard-compatible binary
+# `IpNet` codec used by `WgPeerConfig::allowed_ips`. Pinned at the
+# consumer site (not workspace-wide) so `bibeam-transport`'s current
+# serde-free use of `IpNet` stays unaffected.
+ipnet = { workspace = true, features = ["serde"] }
+# `ulid`'s raw byte conversion (`Ulid::from_bytes` / `Ulid::to_bytes`)
+# powers `RelayFrame`'s fixed 16-byte chain_id prefix. The newtype's
+# transparent serde is provided by `bibeam-core`.
+ulid = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
@@ -24,4 +33,4 @@ ulid = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "serde", "postcard", "thiserror", "bytes"]
+ignored = ["bibeam-core", "serde", "postcard", "thiserror", "bytes", "ipnet", "ulid"]

@@ -70,20 +70,28 @@
 use std::collections::HashMap;
 
 use bibeam_core::{CohortId, PeerId, Timestamp};
-use bibeam_protocol::control::MatchResponse;
+use bibeam_protocol::control::{MatchResponse, SingleHopMatch};
 use parking_lot::Mutex;
 
 use super::audit::AuditLog;
 use super::cohorts::CohortRecord;
 
 /// Outcome of a single [`AdmissionGate::admit_or_bucket`] call.
+///
+/// The [`Self::Admitted`] variant boxes its [`MatchResponse`] payload
+/// because the multi-hop variant
+/// ([`MatchResponse::MultiHopAssignment`]) is materially larger than
+/// the single-hop one — without the indirection, every `Bucketed`
+/// value on the wait list would carry the same memory footprint as a
+/// fully populated multi-hop response, which `clippy::large_enum_variant`
+/// flags at the workspace's `-D warnings` setting.
 #[derive(Debug)]
 pub enum AdmissionOutcome {
     /// The cohort cleared the floor when this peer was added;
     /// caller should respond immediately with the supplied
     /// [`MatchResponse`]. The response carries the real cohort id
     /// supplied at call time, not a placeholder.
-    Admitted(MatchResponse),
+    Admitted(Box<MatchResponse>),
     /// The cohort did not clear the floor; the peer has been
     /// bucketed on the wait list and the caller should `await` the
     /// returned [`tokio::sync::oneshot::Receiver`] (with a bounded
@@ -209,7 +217,7 @@ impl AdmissionGate {
         }
         let live_count = u32::try_from(cohort.members.len()).unwrap_or(u32::MAX);
         if live_count >= self.floor {
-            return AdmissionOutcome::Admitted(build_response(cohort_id, cohort));
+            return AdmissionOutcome::Admitted(Box::new(build_response(cohort_id, cohort)));
         }
         let (response_tx, response_rx) = tokio::sync::oneshot::channel();
         let pending_entry = PendingAdmission {
@@ -475,12 +483,16 @@ fn extend_pairs_from_bucket(
 }
 
 /// Build a wire [`MatchResponse`] from the cohort id + record.
+///
+/// Phase 1's admission gate only emits the single-hop branch
+/// ([`MatchResponse::SingleHop`]); multi-hop assignments arrive in
+/// R-MULTIHOP-COORD when the coordinator-side path assembly lands.
 fn build_response(cohort_id: CohortId, cohort: &CohortRecord) -> MatchResponse {
-    MatchResponse {
+    MatchResponse::SingleHop(SingleHopMatch {
         cohort: cohort_id,
         exit_set: cohort.exits.clone(),
         rotation_deadline: cohort.rotation_deadline,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -523,9 +535,14 @@ mod tests {
         let peer = PeerId::new();
         let outcome = gate.admit_or_bucket(peer, cohort_id, "us-east", &mut cohort);
         match outcome {
-            AdmissionOutcome::Admitted(response) => {
-                assert_eq!(response.cohort, cohort_id);
-                assert_eq!(response.exit_set, cohort.exits);
+            AdmissionOutcome::Admitted(response) => match *response {
+                MatchResponse::SingleHop(single_hop) => {
+                    assert_eq!(single_hop.cohort, cohort_id);
+                    assert_eq!(single_hop.exit_set, cohort.exits);
+                },
+                MatchResponse::MultiHopAssignment(_) => {
+                    panic!("admission gate must emit single-hop only at this phase")
+                },
             },
             AdmissionOutcome::Bucketed(_) => panic!("must admit immediately"),
             AdmissionOutcome::RegionMismatch { .. } => {
@@ -584,10 +601,16 @@ mod tests {
         // the real cohort id.
         let response_first = receiver_first.try_recv().expect("first receiver should resolve");
         let response_second = receiver_second.try_recv().expect("second receiver should resolve");
-        assert_eq!(response_first.cohort, cohort_id);
-        assert_eq!(response_first.exit_set, cohort.exits);
-        assert_eq!(response_second.cohort, cohort_id);
-        assert_eq!(response_second.exit_set, cohort.exits);
+        let MatchResponse::SingleHop(first) = response_first else {
+            panic!("admission gate must emit single-hop only at this phase");
+        };
+        let MatchResponse::SingleHop(second) = response_second else {
+            panic!("admission gate must emit single-hop only at this phase");
+        };
+        assert_eq!(first.cohort, cohort_id);
+        assert_eq!(first.exit_set, cohort.exits);
+        assert_eq!(second.cohort, cohort_id);
+        assert_eq!(second.exit_set, cohort.exits);
     }
 
     #[test]
@@ -880,7 +903,10 @@ mod tests {
         assert_eq!(eu_de_released, 29);
         for mut receiver in eu_de_receivers {
             let response = receiver.try_recv().expect("eu-de waiter resolves");
-            assert_eq!(response.cohort, eu_de_cohort_id);
+            let MatchResponse::SingleHop(single_hop) = response else {
+                panic!("admission gate must emit single-hop only at this phase");
+            };
+            assert_eq!(single_hop.cohort, eu_de_cohort_id);
         }
 
         // Drain us-east — none release; one refusal emitted.

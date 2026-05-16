@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 //! ULID newtypes for the `BiBEAM` identity space.
 //!
-//! Three distinct wrappers — [`PeerId`], [`NodeId`], [`CohortId`] — sit over
-//! [`ulid::Ulid`] so the type system can distinguish a peer from a node from a
-//! cohort, even though they all share the same wire encoding (a 128-bit
-//! Crockford-Base32 ULID).
+//! Four distinct wrappers — [`PeerId`], [`NodeId`], [`CohortId`], [`ChainId`]
+//! — sit over [`ulid::Ulid`] so the type system can distinguish a peer from a
+//! node from a cohort from a multi-hop forwarder chain, even though they all
+//! share the same wire encoding (a 128-bit Crockford-Base32 ULID).
 
 use core::{fmt, str::FromStr};
 
@@ -89,4 +89,16 @@ ulid_newtype! {
     /// Identifier for a cohort — a logical grouping of peers that share a
     /// trust or routing scope.
     CohortId
+}
+
+ulid_newtype! {
+    /// Identifier for a multi-hop forwarder chain.
+    ///
+    /// Coordinator-issued opaque handle that every forwarder along a
+    /// `MatchResponse::MultiHopAssignment` chain uses to look up the
+    /// row in its lease table that authorises a given packet flow.
+    /// Lives independently of [`CohortId`] because one cohort can have
+    /// many concurrent multi-hop assignments, and one chain may serve
+    /// peers from different cohorts at different times.
+    ChainId
 }

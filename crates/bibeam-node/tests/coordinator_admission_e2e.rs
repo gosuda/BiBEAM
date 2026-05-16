@@ -24,6 +24,7 @@ use bibeam_node::coordinator::admission::Admissioner;
 use bibeam_node::coordinator::admission_gate::{AdmissionGate, AdmissionOutcome};
 use bibeam_node::coordinator::cohorts::{CohortRecord, CohortStore};
 use bibeam_node::coordinator::registry::PeerRegistry;
+use bibeam_protocol::control::MatchResponse;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::version4::V4;
@@ -122,13 +123,18 @@ async fn admission_pipeline_round_trips_token_at_floor() {
         let outcome = gate.admit_or_bucket(*peer_id, cohort_id, region, &mut cohort_record);
         let one_indexed = index + 1;
         match outcome {
-            AdmissionOutcome::Admitted(response) => assert_admitted_outcome(
-                response.cohort,
-                cohort_id,
-                one_indexed,
-                *peer_id == explicit_first,
-                &mut explicit_first_admitted,
-            ),
+            AdmissionOutcome::Admitted(response) => match *response {
+                MatchResponse::SingleHop(single_hop) => assert_admitted_outcome(
+                    single_hop.cohort,
+                    cohort_id,
+                    one_indexed,
+                    *peer_id == explicit_first,
+                    &mut explicit_first_admitted,
+                ),
+                MatchResponse::MultiHopAssignment(_) => {
+                    panic!("admission gate must emit single-hop only at this phase")
+                },
+            },
             AdmissionOutcome::Bucketed(receiver) => {
                 bucketed_receivers.push(receiver);
                 assert!(one_indexed < ANONYMITY_FLOOR as usize);
@@ -150,6 +156,9 @@ async fn admission_pipeline_round_trips_token_at_floor() {
     assert_eq!(released, bucketed_receivers.len());
     for mut receiver in bucketed_receivers {
         let response = receiver.try_recv().expect("waiter resolved");
+        let MatchResponse::SingleHop(response) = response else {
+            panic!("admission gate must emit single-hop only at this phase");
+        };
         assert_eq!(response.cohort, cohort_id);
         assert_eq!(response.exit_set, cohort_record.exits);
     }

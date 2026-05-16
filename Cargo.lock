@@ -508,6 +508,7 @@ version = "0.0.1"
 dependencies = [
  "bibeam-core",
  "bytes",
+ "ipnet",
  "postcard",
  "proptest",
  "serde",
