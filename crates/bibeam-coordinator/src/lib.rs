@@ -16,6 +16,7 @@ pub mod admission;
 pub mod admission_gate;
 pub mod audit;
 pub mod cohorts;
+pub mod health;
 pub mod invite_admission;
 pub mod log_hooks;
 pub mod rate_limit;
