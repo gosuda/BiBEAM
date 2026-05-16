@@ -6,7 +6,7 @@ license = { workspace = true }
 repository = { workspace = true }
 keywords = { workspace = true }
 categories = { workspace = true }
-description = "QUIC and Noise datagram tunnel with STUN hole-punching."
+description = "`WireGuard` data plane built on the `boringtun` userspace state machine over a `tokio::net::UdpSocket`; coordinator-bound `rustls` HTTPS, STUN hole-punch, relay and SOCKS5 fallbacks, per-session rate limiter."
 
 [dependencies]
 bibeam-core = { workspace = true }
@@ -14,11 +14,11 @@ bibeam-protocol = { workspace = true }
 bibeam-crypto = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
-quinn = { workspace = true }
-quinn-proto = { workspace = true }
+boringtun = { workspace = true }
 rustls = { workspace = true }
 bytes = { workspace = true }
 futures-util = { workspace = true }
+parking_lot = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
@@ -26,4 +26,4 @@ tracing = { workspace = true }
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "quinn", "quinn-proto", "rustls", "bytes", "futures-util", "thiserror", "tracing"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "tokio", "tokio-util", "boringtun", "rustls", "bytes", "futures-util", "parking_lot", "thiserror", "tracing"]
