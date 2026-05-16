@@ -8,6 +8,12 @@ keywords = { workspace = true }
 categories = { workspace = true }
 description = "Shared runtime primitives: tracing, metrics, config, signals, health."
 
+[features]
+# Re-export `mimalloc::MiMalloc` from `alloc` so a downstream binary
+# can wire it in as its `#[global_allocator]`. Off by default — only
+# the server binaries opt in (gated by their own `mimalloc` feature).
+mimalloc = ["dep:mimalloc"]
+
 [dependencies]
 bibeam-core = { workspace = true }
 tokio = { workspace = true }
@@ -24,9 +30,14 @@ tower-http = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+mimalloc = { workspace = true, optional = true }
+
+[dev-dependencies]
+figment = { workspace = true, features = ["test"] }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "tokio", "tokio-util", "tracing", "tracing-subscriber", "tracing-error", "metrics", "metrics-exporter-prometheus", "figment", "clap", "axum", "tower-http", "serde", "thiserror", "anyhow"]
+ignored = ["bibeam-core", "tokio", "tokio-util", "tracing", "tracing-subscriber", "tracing-error", "metrics", "metrics-exporter-prometheus", "figment", "clap", "axum", "tower-http", "serde", "thiserror", "anyhow", "mimalloc"]
