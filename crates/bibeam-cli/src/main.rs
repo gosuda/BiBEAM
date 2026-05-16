@@ -5,6 +5,7 @@ mod cli;
 mod config;
 mod ech;
 mod exit_pick;
+mod multihop;
 mod register;
 mod rotation;
 mod socks5_fallback;

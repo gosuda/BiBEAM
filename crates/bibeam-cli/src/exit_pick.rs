@@ -25,7 +25,7 @@
 //! enforced at the pick site. Exits with no region tag in
 //! `exit_regions` are treated as non-matches (region-unknown, not
 //! wildcard). An empty filtered set returns [`None`] so the caller
-//! can surface this as "no exit available in <region>; defer to
+//! can surface this as "no exit available in `<region>`; defer to
 //! retry / fallback to multi-hop" per §11 R-3 refusal semantics —
 //! see the [audit-log on region mismatch] tracker (R-REGION.3).
 //!

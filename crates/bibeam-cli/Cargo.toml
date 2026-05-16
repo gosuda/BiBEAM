@@ -35,6 +35,7 @@ blake3 = { workspace = true }             # 64-bit issuer-fingerprint preview in
 tokio-util = { workspace = true }         # CancellationToken for the F-CLI.5 rotation loop
 serde = { workspace = true }              # typed config struct loaded via figment (F-CLI.6)
 toml = { workspace = true }               # `config` subcommand renders the resolved config as TOML for operator inspection (F-CLI.6)
+bytes = { workspace = true }              # owned RelayFrame payload + WG ciphertext buffers in the R-MULTIHOP-CLI session module
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] } # virtual-time test fixtures for rotation_loop (start_paused)

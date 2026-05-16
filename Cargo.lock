@@ -376,6 +376,7 @@ dependencies = [
  "bibeam-transport",
  "bibeam-tun",
  "blake3",
+ "bytes",
  "caps",
  "clap",
  "directories",
