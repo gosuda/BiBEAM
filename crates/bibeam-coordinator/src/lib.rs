@@ -14,6 +14,7 @@
 
 pub mod admission;
 pub mod admission_gate;
+pub mod audit;
 pub mod cohorts;
 pub mod invite_admission;
 pub mod registry;
