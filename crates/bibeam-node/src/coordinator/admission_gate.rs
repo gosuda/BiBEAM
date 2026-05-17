@@ -578,11 +578,11 @@ fn extend_pairs_from_bucket(
 /// operator-tagged region string at admit / drain time, populating the
 /// per-exit [`SingleHopMatch::exit_regions`] map. Exits with no entry
 /// in the lookup do not appear in the emitted map; the client's
-/// `pick_exit(..., Some(region), ..)` treats those as non-matches per
-/// F-CLI.4b. When the caller has no lookup (in-module tests, MVP
-/// boot-time stub), pass a closure that always returns `None` — the
-/// emitted map will be empty and the client falls back to the
-/// "region-unknown" pick path.
+/// `pick_exit(..., ExitFilter::Region(region), ..)` treats those as
+/// non-matches per F-CLI.4b. When the caller has no lookup (in-module
+/// tests, MVP boot-time stub), pass a closure that always returns
+/// `None` — the emitted map will be empty and any region-filtered
+/// pick falls back to the §11 R-3 refusal path.
 fn build_response(
     cohort_id: CohortId,
     cohort: &CohortRecord,

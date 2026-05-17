@@ -275,7 +275,7 @@ async fn bootstrap_happy_path_register_and_match() {
 /// `bootstrap()` into `CohortLive.exit_regions`, where the client's
 /// region-aware exit picker can filter by it. Before the
 /// `SingleHopMatch` field was added this map was empty regardless
-/// of operator config — `pick_exit(.., Some(r), ..)` then refused
+/// of operator config — `pick_exit(.., ExitFilter::Region(r), ..)` then refused
 /// every call (the §11 R-3 deferral path). This test pins the
 /// happy production-path data flow: coord emits → bootstrap copies
 /// → client filter sees real region tags.

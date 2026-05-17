@@ -92,19 +92,16 @@ pub struct SingleHopMatch {
     pub exit_set: Vec<NodeId>,
     /// Per-exit operator-tagged region tag, indexed by [`NodeId`] from
     /// [`Self::exit_set`]. Same free-form string shape as
-    /// [`bibeam_core::Timestamp`]-companion `bibeam_discovery::ExitRecord::region`
-    /// (R-REGION.1). The coordinator copies the tag verbatim from the
-    /// discovery record at admission / drain time (R-REGION.3). Missing
-    /// entries mean "region unknown for that exit"; the client's
-    /// region-aware exit picker (F-CLI.4b) MUST treat a missing tag as
-    /// a non-match, never as a wildcard.
-    ///
-    /// Defaults to an empty map for backward-compat: a coord that has
-    /// not been upgraded ships an empty map, and the client's
-    /// `pick_exit(.., Some(region), ..)` then refuses with `None` —
-    /// matching the §11 R-3 "no exit in `<region>`; defer / fallback to
-    /// multi-hop" semantics.
-    #[serde(default)]
+    /// `bibeam_discovery::ExitRecord::region` (R-REGION.1) — the
+    /// coordinator copies the tag verbatim from the discovery record at
+    /// admission / drain time (R-REGION.3). The field itself is
+    /// required on the wire (no `#[serde(default)]`); producers emit
+    /// the map (possibly empty `{}`) and consumers refuse to decode a
+    /// frame that omits it. Within the map, missing per-exit entries
+    /// mean "region unknown for that exit"; the client's region-aware
+    /// exit picker (F-CLI.4b) MUST treat a missing entry as a
+    /// non-match, never as a wildcard — that surfaces as the §11 R-3
+    /// "no exit in `<region>`; defer / fallback to multi-hop" path.
     pub exit_regions: HashMap<NodeId, String>,
     /// Wall-clock instant at which the peer must rotate.
     pub rotation_deadline: Timestamp,

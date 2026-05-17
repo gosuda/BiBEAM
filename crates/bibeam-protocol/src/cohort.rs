@@ -53,18 +53,17 @@ pub struct CohortLive {
     /// [`Self::exits`]. Same free-form string shape as
     /// `bibeam_discovery::ExitRecord::region` (R-REGION.1) — the
     /// coordinator copies the tag verbatim from the discovery record at
-    /// snapshot time. Missing entries mean "region unknown for that
-    /// exit"; callers that filter by a requested region MUST treat a
-    /// missing tag as a non-match, never as a wildcard.
-    ///
-    /// Defaults to an empty map for backward-compat. The R-REGION.3
-    /// coord-side cohort emitter populates this map by copying it from
-    /// the matching [`crate::control::SingleHopMatch::exit_regions`]
-    /// field at admission / rotation time; a coord that has not been
-    /// upgraded ships the empty map and `pick_exit(.., Some(r), ..)`
-    /// then refuses with `None` — the §11 R-3 "no exit in `<region>`;
-    /// defer / fallback to multi-hop" semantics.
-    #[serde(default)]
+    /// snapshot time. The R-REGION.3 coord-side cohort emitter
+    /// populates this map by copying it from the matching
+    /// [`crate::control::SingleHopMatch::exit_regions`] field at
+    /// admission / rotation time. The field itself is required on the
+    /// wire (no `#[serde(default)]`); producers emit the map (possibly
+    /// empty `{}`) and consumers refuse to decode a frame that omits
+    /// it. Within the map, missing per-exit entries mean "region
+    /// unknown for that exit"; callers that filter by a requested
+    /// region MUST treat a missing entry as a non-match, never as a
+    /// wildcard — that surfaces as the §11 R-3 "no exit in
+    /// `<region>`; defer / fallback to multi-hop" path.
     pub exit_regions: HashMap<NodeId, String>,
     /// When this snapshot was captured.
     pub at: Timestamp,

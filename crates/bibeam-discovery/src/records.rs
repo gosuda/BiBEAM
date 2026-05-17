@@ -81,7 +81,15 @@ pub struct PeerRecord {
     /// sentinel would alias a real-but-broken registration to the
     /// absent case. `Option` keeps the two distinguishable in the
     /// type system.
-    #[serde(default, with = "wg_public_key_option_serde")]
+    ///
+    /// On the wire the field is REQUIRED: producers MUST emit either
+    /// `null` (peer has not registered a key) or the base64 string,
+    /// and consumers refuse to decode a record that omits the field
+    /// entirely. The previous `#[serde(default)]` shape silently
+    /// filled `None` on absence; that fallback was speculative
+    /// forward-compat for pre-R-MULTIHOP-COORD publishers that no
+    /// longer exist (pre-1.0 MVP) and is now removed.
+    #[serde(with = "wg_public_key_option_serde")]
     pub wg_public_key: Option<WgPublicKey>,
 }
 
@@ -334,13 +342,15 @@ mod tests {
     }
 
     #[test]
-    fn peer_record_missing_wg_public_key_field_defaults_to_none() {
-        // Contract: a pre-R-MULTIHOP-COORD JSON shape that omits
-        // `wg_public_key` entirely must still deserialise — the
-        // field carries `#[serde(default)]` so the option lands as
-        // `None`. Catches a regression that made the new field a
-        // hard wire requirement (which would break every existing
-        // PeerRecord publisher on rollout).
+    fn peer_record_missing_wg_public_key_field_is_rejected() {
+        // Contract (post-Cleanup-A): the wire field is REQUIRED.
+        // A JSON shape that omits `wg_public_key` entirely must
+        // FAIL to deserialise — the `#[serde(default)]` fallback
+        // is gone (the speculative forward-compat is removed at
+        // pre-1.0 with no consumers). Catches a regression that
+        // re-introduces `#[serde(default)]` on this field, which
+        // would silently swallow drift between coord and peer
+        // schemas.
         let json_without_wg = serde_json::json!({
             "peer_id": PeerId::new(),
             "addr_hint": "192.0.2.4:41443",
@@ -350,9 +360,13 @@ mod tests {
             "region": "",
             "region_last_verified_at": Timestamp::now(),
         });
-        let decoded: PeerRecord =
-            serde_json::from_value(json_without_wg).expect("decode legacy shape");
-        assert!(decoded.wg_public_key.is_none());
+        let err = serde_json::from_value::<PeerRecord>(json_without_wg)
+            .expect_err("missing wg_public_key must reject");
+        let message = format!("{err}");
+        assert!(
+            message.contains("wg_public_key") || message.contains("missing field"),
+            "error must name the missing field; got: {message}",
+        );
     }
 
     #[test]

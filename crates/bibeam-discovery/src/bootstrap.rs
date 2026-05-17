@@ -247,10 +247,9 @@ impl SessionBootstrap {
             // R-REGION.3: coord-side `SingleHopMatch` now carries the
             // per-exit region map; copy it verbatim so the client's
             // region-aware exit pick (F-CLI.4b) has real data to
-            // filter on. An empty map (older coord / no GeoIP DB
-            // configured) collapses every `pick_exit(.., Some(r), ..)`
-            // to the §11 R-3 refusal path — same as the pre-R-REGION.3
-            // behaviour.
+            // filter on. An empty map (no GeoIP DB configured)
+            // collapses every `pick_exit(.., ExitFilter::Region(r), ..)`
+            // to the §11 R-3 refusal path.
             exit_regions: single_hop.exit_regions,
             at: Timestamp::now(),
         };

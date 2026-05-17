@@ -2,9 +2,9 @@
 //! Random exit selection (F-CLI.4, F-CLI.4b).
 //!
 //! [`pick_exit`] picks one [`NodeId`] uniformly at random from a
-//! [`CohortLive`]'s `exits` set, optionally filtered by region. The
-//! CLI calls this once per session and again on every rotation
-//! (F-CLI.5).
+//! [`CohortLive`]'s `exits` set, filtered by an explicit
+//! [`ExitFilter`]. The CLI calls this once per session and again
+//! on every rotation (F-CLI.5).
 //!
 //! ## Why uniform
 //!
@@ -16,20 +16,28 @@
 //! coordinator decides who is eligible; the peer's job is only to
 //! pick anonymously from the supplied list.
 //!
-//! ## Region filter (F-CLI.4b, §11 R-2)
+//! ## Filter contract ([`ExitFilter`], F-CLI.4 / F-CLI.4b)
 //!
-//! When the user has pinned a `requested_region`, the candidate
-//! set is filtered by exact case-sensitive string match against
-//! [`CohortLive::exit_regions`] BEFORE the uniform-random pick.
-//! Case-canonicalization is operator-runbook-documented and NOT
-//! enforced at the pick site. Exits with no region tag in
-//! `exit_regions` are treated as non-matches (region-unknown, not
-//! wildcard). An empty filtered set returns [`None`] so the caller
-//! can surface this as "no exit available in `<region>`; defer to
-//! retry / fallback to multi-hop" per §11 R-3 refusal semantics —
-//! see the [audit-log on region mismatch] tracker (R-REGION.3).
+//! Every call site MUST choose one of two filter variants, making
+//! the region intent explicit at the type level:
 //!
-//! [audit-log on region mismatch]: https://github.com/bibeam-net/BiBeam/issues
+//! - [`ExitFilter::Region`] — restrict candidates to exits whose
+//!   tag in [`CohortLive::exit_regions`] matches the borrowed
+//!   string (case-sensitive, exact). Exits with no region entry
+//!   are non-matches, never wildcards (§11 R-2). An empty filtered
+//!   set returns [`None`] for the caller to surface as a §11 R-3
+//!   refusal ("no exit in `<region>`; defer / fallback to
+//!   multi-hop").
+//! - [`ExitFilter::Any`] — full `cohort.exits` set with no region
+//!   restriction. This is the explicit "any region is fine"
+//!   choice; previously this case was modelled as
+//!   `requested_region: Option<&str>::None`, which silently
+//!   conflated "no preference" with "missing argument."
+//!
+//! The previous `Option<&str>`-shaped argument is gone: there is
+//! no implicit fallback. Every caller writes either
+//! `ExitFilter::Any` or `ExitFilter::Region(r)`, so the intent
+//! reads at the call site.
 //!
 //! ## RNG injection
 //!
@@ -44,20 +52,49 @@ use bibeam_protocol::cohort::CohortLive;
 use rand::RngExt as _;
 use rand::seq::IteratorRandom as _;
 
-/// Pick one exit uniformly at random from `cohort.exits`, filtered
-/// by `requested_region` when supplied.
+/// Explicit caller-supplied filter for [`pick_exit`].
 ///
-/// Returns [`None`] when the cohort has no exits — the caller
-/// must surface this as "cohort still bootstrapping; retry after
-/// the next `CohortAssigned` event" rather than as a hard error.
+/// Replaces the previous `Option<&str>` argument so the "any
+/// region" case reads as a distinct variant at every call site
+/// (Cleanup A — wire-format forward-compat strip).
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
+              consumed only by sibling private modules; clippy disagrees. We side with \
+              rustc, the load-bearing lint."
+)]
+#[allow(
+    dead_code,
+    reason = "variants are constructed today only by the module's own integration tests; \
+              F-CLI.5's rotation loop will wire `ExitFilter::Any` (default) and \
+              `ExitFilter::Region(r)` (when the user pins a region) on the same commit \
+              that lifts `#[allow(dead_code)]` off `pick_exit`."
+)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ExitFilter<'a> {
+    /// Restrict candidates to exits whose region tag matches the
+    /// supplied string (case-sensitive, exact). The borrow lets
+    /// callers pass through a `&str` from CLI args or session
+    /// state without an allocation.
+    Region(&'a str),
+    /// Pick from the full `cohort.exits` set with no region
+    /// restriction. Distinct from "no caller supplied a region"
+    /// — this is the affirmative "any region is acceptable"
+    /// choice.
+    Any,
+}
+
+/// Pick one exit uniformly at random from `cohort.exits`,
+/// constrained by the supplied [`ExitFilter`].
 ///
-/// When `requested_region` is [`Some`], the candidate set is the
-/// subset of `cohort.exits` whose region tag in
-/// [`CohortLive::exit_regions`] equals the requested string
-/// (case-sensitive). If the filter empties the set, returns
-/// [`None`] (see module-level docs and §11 R-3). When
-/// `requested_region` is [`None`], the candidate set is the full
-/// `cohort.exits` (backward-compatible F-CLI.4 behaviour).
+/// Returns [`None`] when:
+/// - the cohort has no exits at all — caller surfaces as "cohort
+///   still bootstrapping; retry after the next `CohortAssigned`
+///   event" rather than a hard error; or
+/// - the filter is [`ExitFilter::Region`] and no exit in the set
+///   carries a matching region tag — caller surfaces as the
+///   §11 R-3 refusal ("no exit in `<region>`; defer / fallback to
+///   multi-hop").
 ///
 /// The RNG is `&mut impl rand::Rng` so callers can wire in a
 /// seeded RNG for tests; production callers use `rand::rng()`.
@@ -75,15 +112,15 @@ use rand::seq::IteratorRandom as _;
 )]
 pub(crate) fn pick_exit<R: rand::Rng + ?Sized>(
     cohort: &CohortLive,
-    requested_region: Option<&str>,
+    filter: ExitFilter<'_>,
     rng: &mut R,
 ) -> Option<NodeId> {
-    match requested_region {
-        // F-CLI.4: backward-compat path. Full exit set, uniform
-        // pick. ExactSizeIterator over a Vec keeps this an indexed
-        // pick (no reservoir loop), preserving the original
-        // single-`random_range` shape and allocating nothing.
-        None => {
+    match filter {
+        // F-CLI.4: explicit "any region" path. Full exit set,
+        // uniform pick. Indexed pick over the Vec preserves the
+        // original single-`random_range` shape — no reservoir
+        // loop, no intermediate allocations.
+        ExitFilter::Any => {
             if cohort.exits.is_empty() {
                 return None;
             }
@@ -98,7 +135,7 @@ pub(crate) fn pick_exit<R: rand::Rng + ?Sized>(
         // single weighted-by-index reservoir pick falls out at the
         // end. Returns `None` for the empty filtered set, which
         // the caller surfaces as a §11 R-3 refusal.
-        Some(region) => cohort
+        ExitFilter::Region(region) => cohort
             .exits
             .iter()
             .copied()
@@ -137,7 +174,7 @@ mod tests {
         // crash-on-startup the moment the cohort is empty.
         let cohort = cohort_with_exits(0);
         let mut rng = StdRng::seed_from_u64(42);
-        assert!(pick_exit(&cohort, None, &mut rng).is_none());
+        assert!(pick_exit(&cohort, ExitFilter::Any, &mut rng).is_none());
     }
 
     #[test]
@@ -146,7 +183,7 @@ mod tests {
         // exit. Determinism guarantees the seed doesn't matter.
         let cohort = cohort_with_exits(1);
         let mut rng = StdRng::seed_from_u64(1);
-        let picked = pick_exit(&cohort, None, &mut rng).expect("singleton must pick");
+        let picked = pick_exit(&cohort, ExitFilter::Any, &mut rng).expect("singleton must pick");
         assert_eq!(picked, cohort.exits[0]);
     }
 
@@ -158,7 +195,8 @@ mod tests {
         let cohort = cohort_with_exits(4);
         let mut rng = StdRng::seed_from_u64(0xDEAD_BEEF);
         for _ in 0..100 {
-            let picked = pick_exit(&cohort, None, &mut rng).expect("non-empty must pick");
+            let picked =
+                pick_exit(&cohort, ExitFilter::Any, &mut rng).expect("non-empty must pick");
             assert!(
                 cohort.exits.contains(&picked),
                 "picked exit {picked:?} not in cohort.exits {:?}",
@@ -181,7 +219,8 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(0xCAFE_F00D);
         let mut counts = vec![0_usize; cohort.exits.len()];
         for _ in 0..10_000 {
-            let picked = pick_exit(&cohort, None, &mut rng).expect("non-empty must pick");
+            let picked =
+                pick_exit(&cohort, ExitFilter::Any, &mut rng).expect("non-empty must pick");
             let idx = cohort
                 .exits
                 .iter()
@@ -204,14 +243,14 @@ mod tests {
         // cohort.exits down to exits whose region tag matches the
         // requested region BEFORE the uniform-random pick.
         //
-        // - `Some("us-east")` over `[us-east, eu-de, us-east, kr-seoul]`
+        // - `ExitFilter::Region("us-east")` over `[us-east, eu-de, us-east, kr-seoul]`
         //   must always return one of the two us-east exits.
-        // - `Some("kr-seoul")` must always return the single
+        // - `ExitFilter::Region("kr-seoul")` must always return the single
         //   kr-seoul exit (determinism is incidental: the
         //   filtered set has only one element).
-        // - `Some("us-west")` (no member matches) must return
-        //   None — the caller surfaces this as a §11 R-3 refusal
-        //   ("no exit in <region>; defer / fallback to
+        // - `ExitFilter::Region("us-west")` (no member matches) must
+        //   return None — the caller surfaces this as a §11 R-3
+        //   refusal ("no exit in <region>; defer / fallback to
         //   multi-hop"), not a panic.
         //
         // A regression that ignored the filter would still pick
@@ -240,20 +279,20 @@ mod tests {
         // Hammer the filter 100 times to surface any one-shot
         // bias (e.g. always returning the first match).
         for _ in 0..100 {
-            let picked =
-                pick_exit(&cohort, Some("us-east"), &mut rng).expect("us-east must yield a pick");
+            let picked = pick_exit(&cohort, ExitFilter::Region("us-east"), &mut rng)
+                .expect("us-east must yield a pick");
             assert!(
                 us_east.contains(&picked),
                 "picked exit {picked:?} not in us-east set {us_east:?}",
             );
         }
 
-        let picked_kr =
-            pick_exit(&cohort, Some("kr-seoul"), &mut rng).expect("kr-seoul must yield a pick");
+        let picked_kr = pick_exit(&cohort, ExitFilter::Region("kr-seoul"), &mut rng)
+            .expect("kr-seoul must yield a pick");
         assert_eq!(picked_kr, kr_seoul);
 
         // §11 R-3: empty filtered set is None, not a panic.
-        let picked_none = pick_exit(&cohort, Some("us-west"), &mut rng);
+        let picked_none = pick_exit(&cohort, ExitFilter::Region("us-west"), &mut rng);
         assert!(
             picked_none.is_none(),
             "us-west has no member in the exit set; must refuse with None, got {picked_none:?}",
