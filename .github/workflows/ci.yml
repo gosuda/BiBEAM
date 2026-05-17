@@ -92,7 +92,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
-      - run: cargo llvm-cov nextest --workspace --all-features --lcov --output-path lcov.info
+      # Phase-2 gate (plan §2.5): `--fail-under-lines N` enforces a minimum
+      # line-coverage floor. Start at 50% — strict enough to catch coverage
+      # regressions on substantial test deletions, loose enough not to block
+      # legitimate feature work. Ratchet upward via dedicated `chore(ci):
+      # tighten coverage floor` commits as the suite matures. Codecov upload
+      # runs as a separate step so its failure does not mask the threshold
+      # failure (`fail_ci_if_error: false` is kept on the upload only).
+      - name: cargo llvm-cov nextest with line floor
+        run: cargo llvm-cov nextest --workspace --all-features --lcov --output-path lcov.info --fail-under-lines 50
       - uses: codecov/codecov-action@v4
         with:
           files: lcov.info
