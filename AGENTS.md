@@ -4,10 +4,10 @@ This file gives an AI coding assistant the minimum it needs to make a useful fir
 
 ## Quick facts
 
-- **Project.** BiBeam (브랜드 케이스), 비빔 in Hangul; also expanded as Bidirectional-Beam (Bi-Beam). The name doubles as etymology (Korean *bibimbap*) and design metaphor (a bidirectional beam linking peers). Identifier `bibeam` (lowercase). Never substitute hanja, never romanize the Hangul to `bibim`.
+- **Project.** BiBeam (brand case) / 비빔 (Hangul) / Bidirectional-Beam (Bi-Beam). Etymology: Korean *bibimbap*; design metaphor: a bidirectional beam linking peers. ASCII identifier `bibeam` (lowercase). Never substitute hanja; never romanize 비빔 to `bibim`.
 - **Edition.** Rust 2024 (`resolver = "3"`).
 - **Toolchain.** Latest stable. **No MSRV pin.** `rust-toolchain.toml` declares `channel = "stable"`. CI runs `dtolnay/rust-toolchain@stable`. There is no nightly, no per-version matrix, no `cargo +nightly` anywhere.
-- **Phase.** Phase 1 init complete + plan §11 revisions landed. The 10 crates carry real implementations (frames, codec, crypto, transport, TUN, discovery, runtime, coord, node forwarder, exit-mode, CLI). What's NOT yet wired: the `bibeam-node` supervisor that composes the F-NODE.* modules into a single running daemon (each module's unit + integration tests pass; the binary's `src/main.rs` is the §0.2a placeholder per the original plan).
+- **Phase.** Phase 1 init + plan §11 revisions (R-MERGE, R-REGION, R-FLOOR, R-MULTIHOP, R-VERIFY) landed; the 10 crates carry real implementations and 370 tests pass. The `bibeam-node` `src/main.rs` supervisor that composes the F-NODE.* modules into one running daemon is the staged follow-up (the §0.2a placeholder per the original plan).
 
 ## Commands
 
@@ -55,7 +55,7 @@ See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map,
 - Using `std::sync::Mutex` / `std::sync::RwLock` — `clippy.toml` disallows them in favor of `parking_lot` equivalents.
 - Using `chrono::DateTime` — `clippy.toml` disallows it in favor of `time::OffsetDateTime`.
 - Using `println!` / `eprintln!` / `dbg!` in non-test code — disallowed by the restriction lints. Use `tracing` macros.
-- Treating actually-implemented features as Phase-2-deferred. The anonymity-set ≥30 floor IS enforced (see `crates/bibeam-node/src/coordinator/admission_gate.rs` — per-region partition + `NoAnonymousPathAvailable` refusal per §11 R-FLOOR + R-3 formalism). Still genuinely Phase 2 / not-yet-implemented: release-plz, cargo-dist, dependabot, coordinator replication protocol (P2A-1 only recorded the decision). Re-implementing what already exists wastes a sweep.
+- Re-implementing what already exists. The anonymity-set ≥30 floor IS enforced today (`crates/bibeam-node/src/coordinator/admission_gate.rs` — R-FLOOR per-region partition + `NoAnonymousPathAvailable` refusal per R-3 formalism). Genuinely Phase 2 / not-yet-implemented: release-plz, cargo-dist, dependabot, coordinator replication protocol (P2A-1 only recorded the decision).
 - Hyphenated negative prefixes in comments (the three-letter form starting with `m`, hyphen, then a verb such as `paired` / `keyed` / `bind` / `classified` / `delivered`) trip the `typos` pre-commit hook because that three-letter token is read as a misspelling of `miss` / `mist`. Use `wrongly <verb>` or rewrite the phrase. The hook also enforces `unparsable` over the alternate spelling with an `e`.
 - Adding a third-party dependency without checking the rubric in [`CONTRIBUTING.md`](./CONTRIBUTING.md) — active in the last 12 months, no RustSec advisory, latest release not yanked.
 
@@ -68,8 +68,7 @@ Quick reference so you don't grep the plan-doc on every change. Full rationale l
 - **D-4** VPN protocol family: **WireGuard wire-compat via `boringtun`** end-to-end (clients see a stock WG peer).
 - **D-5** GeoIP region cross-check: **warn-only** at MVP. Mismatch emits `AuditKind::RegionMismatch`; admission proceeds.
 - **D-6** Multi-hop construction: **option (c) — stateful UDP forwarder + end-to-end client↔exit WG** (TURN-style). Intermediates see address pair + ciphertext, never plaintext. Verified by the `forwarder_relays_opaque_payload_byte_preserving` integration test in `crates/bibeam-node/tests/multihop_e2e.rs`.
-- **R-1** Coord crate dissolved into `bibeam-node/src/coordinator/`; the single binary carries both roles behind `is_coordinator`.
-- **R-2** Region is operator-tagged free-form `String` on `PeerRecord`/`RelayRecord`/`ExitRecord`; coord cross-checks against GeoIP per D-5.
+- **R-2** Region is operator-tagged free-form `String` on `PeerRecord`/`RelayRecord`/`ExitRecord`; coord cross-checks against GeoIP per D-5. (R-1 — coord-crate dissolution — is documented inline above in *Workspace layout*; not repeated here.)
 - **R-3** Per-position anonymity floor is **topology-only**: every position p in a multi-hop path must independently satisfy `|position_cohort(C, p)| + 1 ≥ 30`. **No union across hops** (an earlier draft's union claim was rejected by review). Under-floor → refuse, don't auto-route.
 - **R-MULTIHOP-PROTO** packet-to-lease binding: **option (B)** — explicit `RelayFrame { chain_id, wg_payload }` encapsulation. Coord NEVER holds WG private keys; client + exit each generate their own keypairs at registration and publish only public keys.
 
