@@ -584,6 +584,7 @@ dependencies = [
  "bytes",
  "dashmap",
  "etherparse",
+ "proptest",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
