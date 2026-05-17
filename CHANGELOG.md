@@ -8,6 +8,29 @@ From Phase 2 onward this file will be populated automatically by [release-plz](h
 
 ## [Unreleased]
 
+## [0.0.1](https://github.com/gosuda/BiBeam/releases/tag/bibeam-core-v0.0.1) - 2026-05-17
+
+### Added
+
+- *(bibeam-protocol)* MultiHopAssignment + WgPeerConfig + ForwarderLease + RelayFrame (R-MULTIHOP-PROTO)
+- *(bibeam-node)* geoip_verify module + maxminddb workspace dep + [geoip] config block (R-REGION.2)
+- *(bibeam-core)* identity Fingerprint with constant-time eq (F-CORE.3)
+- *(bibeam-core)* BLAKE3-keyed PII redaction helpers (F-CORE.4)
+- *(bibeam-core)* Timestamp wrapper over time::OffsetDateTime (F-CORE.6)
+- *(bibeam-core)* Result<T> type alias over Error (F-CORE.5)
+- *(bibeam-core)* Error enum with class variants (F-CORE.2)
+- *(bibeam-core)* ULID newtypes PeerId, NodeId, CohortId (F-CORE.1)
+- workspace cargo manifests + 10 crate stubs + 10 hand-written per-crate READMEs (#![forbid(unsafe_code)]; xtask deferred to 0.2b)
+
+### Other
+
+- [**breaking**] rename brand-case BiBEAM → BiBeam workspace-wide
+- remove no-op smoke stubs from 7 lib crates + nextest --no-tests=warn
+- prek hooks (.pre-commit-config.yaml + .taplo.toml) + Justfile + bootstrap recipe
+- drop MSRV pin (workspace.package + 11 per-crate manifests) — latest-stable-only policy
+- strict lint / format / supply-chain config (rustfmt, clippy, deny, .cargo, editorconfig, typos, cog)
+- scaffold workspace directory layout
+
 ### Breaking
 
 - **Wire-format fields now required (no `#[serde(default)]` fallback).** The following control-plane fields no longer accept absent values; producers MUST emit the field (possibly empty `{}` / `null`), and consumers refuse to decode a frame that omits the field entirely:
