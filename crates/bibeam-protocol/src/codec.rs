@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! Postcard codec for [`Frame`].
 //!
-//! On the wire every `BiBEAM` message is laid out as:
+//! On the wire every `BiBeam` message is laid out as:
 //!
 //! ```text
 //! MAGIC (4 bytes) || VERSION (1 byte) || postcard-serialised Frame
@@ -24,7 +24,7 @@ use crate::frame::{Frame, MAGIC, VERSION};
 /// payload: four magic bytes followed by one version byte.
 const PREFIX_LEN: usize = MAGIC.len() + 1;
 
-/// Encode `frame` into the canonical `BiBEAM` wire layout.
+/// Encode `frame` into the canonical `BiBeam` wire layout.
 ///
 /// The output is `MAGIC || VERSION || postcard(frame)`. The returned
 /// [`Bytes`] is freshly allocated; callers may share it across tasks

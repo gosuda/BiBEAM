@@ -56,7 +56,7 @@
 //!
 //! Per [`docs/architecture.md`](../../../docs/architecture.md) *SNI-confidentiality
 //! layers*, user-app ECH is end-to-end (browser ↔ destination) and
-//! BiBEAM-transparent. The exit only sees plaintext IP packets after WG
+//! BiBeam-transparent. The exit only sees plaintext IP packets after WG
 //! decryption — it never terminates the user-app TLS, so it cannot inject
 //! ECH and would not want to (a TLS-terminating exit is explicitly
 //! rejected by `docs/threat-model.md`). The control-plane ECH (CLI / node

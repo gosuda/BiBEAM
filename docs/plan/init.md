@@ -1,6 +1,6 @@
-# BiBEAM (비빔) — Init Plan: Strict Rust 2024 Workspace + Distributed P2P VPN
+# BiBeam (비빔) — Init Plan: Strict Rust 2024 Workspace + Distributed P2P VPN
 
-> **Name fidelity.** The project name is rendered as **`비빔`** in Hangul (verbatim). Never substitute hanja (e.g. Chinese-character forms), never romanize the standalone name to `bibim`, never drop the Hangul where it currently appears. The ASCII binary/crate name is `bibeam` (lowercase); the brand is `BiBEAM` (camel-cap); the Korean script is `비빔`. These three forms are interchangeable in human-readable prose; identifiers (binaries, crates, env vars) stay ASCII.
+> **Name fidelity.** The project name is rendered as **`비빔`** in Hangul (verbatim). Never substitute hanja (e.g. Chinese-character forms), never romanize the standalone name to `bibim`, never drop the Hangul where it currently appears. The ASCII binary/crate name is `bibeam` (lowercase); the brand is `BiBeam` (camel-cap); the Korean script is `비빔`. These three forms are interchangeable in human-readable prose; identifiers (binaries, crates, env vars) stay ASCII.
 
 ## 0. Scaffold Order (Do This First)
 
@@ -44,7 +44,7 @@ The init commit is **not** a single atomic dump. It is a sequenced bring-up: eve
 
 **Problem.** Korean users hit Cloudflare-451 / SNI-based geo-blocks. A single user behind a single foreign exit IP is trivially fingerprinted, blocked, or de-anonymized. The fix the user articulated is **collective IP washing** — many users sharing many overseas exits so that any single egress IP carries traffic from dozens of users, none of which is individually linkable.
 
-**Project.** BiBEAM (비빔, "mixing"): a multi-user **distributed P2P VPN/proxy** built in Rust. Two planes:
+**Project.** BiBeam (비빔, "mixing"): a multi-user **distributed P2P VPN/proxy** built in Rust. Two planes:
 
 - **Control plane** — hybrid super-peer rendezvous (Iroh-style): 2–3 federated coordinator nodes host invite-gated peer registration + exit/relay matchmaking; clients may degrade to pkarr-on-Mainline-DHT fallback when super-peers are reachable but blocked.
 - **Data plane** — **Model D+ shared exit pool** (one-bucket mixing): K clients egress through M exits via random-per-session + per-rotation assignment; SNI obfuscation (TLS 1.3 ECH) is the *primary* 451 defense, shared-pool mixing the *secondary* unlinkability layer. Not Tor: anonymity set ~50 users/exit, latency budget < 25 ms direct, falls back to relay only when hole-punch fails.
@@ -57,7 +57,7 @@ The init commit is **not** a single atomic dump. It is a sequenced bring-up: eve
 - Run on Oracle Cloud ARM Free Tier (low-spec) for server-side; cross-platform clients.
 - "Best-effort" minimum-viable scaffold — no over-engineering.
 
-**Current repo state (`/home/alpha/toys/BiBEAM`).** Fresh clone of `github.com/gosuda/BiBEAM` (single commit `53517cc`). Tracked files: `LICENSE` (MIT, GoSuda 2026) + `.gitignore` (Rust-flavored, kept). No Rust sources yet. Toolchain on host: `rustc 1.95.0` stable + nightlies; `cargo-nextest`, `cargo-deny`, `cargo-audit`, `cargo-machete`, `cargo-llvm-cov`, `just`, `bacon`, `eza`, `fd`, `bat`, `rg` all present. `prek` (already available on PATH via Homebrew in the dev image), `typos`, `cocogitto`, `taplo-cli`, `cargo-nextest` either already-present or installed via `cargo install --locked`.
+**Current repo state (`/home/alpha/toys/BiBeam`).** Fresh clone of `github.com/gosuda/BiBeam` (single commit `53517cc`). Tracked files: `LICENSE` (MIT, GoSuda 2026) + `.gitignore` (Rust-flavored, kept). No Rust sources yet. Toolchain on host: `rustc 1.95.0` stable + nightlies; `cargo-nextest`, `cargo-deny`, `cargo-audit`, `cargo-machete`, `cargo-llvm-cov`, `just`, `bacon`, `eza`, `fd`, `bat`, `rg` all present. `prek` (already available on PATH via Homebrew in the dev image), `typos`, `cocogitto`, `taplo-cli`, `cargo-nextest` either already-present or installed via `cargo install --locked`.
 
 **Intended outcome.** A workspace skeleton — every config, lint, hook, and CI gate present and enforcing — plus a layered crate boundary (11 crates) ready for incremental implementation. Zero compile errors, zero clippy warnings, all hooks green on a `git push` of the scaffold.
 
@@ -229,9 +229,9 @@ default-members = ["crates/bibeam-cli"]
 version       = "0.0.1"
 edition       = "2024"
 license       = "MIT"
-repository    = "https://github.com/gosuda/BiBEAM"
-homepage      = "https://github.com/gosuda/BiBEAM"
-authors       = ["GoSuda BiBEAM contributors"]
+repository    = "https://github.com/gosuda/BiBeam"
+homepage      = "https://github.com/gosuda/BiBeam"
+authors       = ["GoSuda BiBeam contributors"]
 readme        = "README.md"
 keywords      = ["vpn", "p2p", "quic", "noise", "privacy"]
 categories    = ["network-programming", "cryptography"]
@@ -686,7 +686,7 @@ tag_prefix           = "v"
 path        = "CHANGELOG.md"
 template    = "remote"
 remote      = "github.com"
-repository  = "BiBEAM"
+repository  = "BiBeam"
 owner       = "gosuda"
 authors     = []
 
@@ -1343,7 +1343,7 @@ workspace = true
 
 ```rust
 #![forbid(unsafe_code)]
-//! `BiBEAM` workspace ops runner. Hosts cross-cutting maintenance subcommands.
+//! `BiBeam` workspace ops runner. Hosts cross-cutting maintenance subcommands.
 //! Current subcommands:
 //!   - `gen-readmes`         — write per-crate `README.md` from each member's `[package].description`.
 //!   - `gen-readmes --check` — drift gate; exit non-zero if any README does not match what would be generated.
@@ -1535,9 +1535,9 @@ Each binary crate also writes its own `README.md` (one paragraph) so the `#![doc
 
 Skeleton content for each doc (path + 1–3 line description of what goes inside). All written as part of init so `cargo doc` and rustdoc intra-doc-links resolve.
 
-- `README.md` — project pitch (BiBEAM = 비빔, "mixing"), the one-liner about Korean-overseas IP-washing for 451 bypass, build/run quickstart, badges, link to docs.
+- `README.md` — project pitch (BiBeam = 비빔, "mixing"), the one-liner about Korean-overseas IP-washing for 451 bypass, build/run quickstart, badges, link to docs.
 - `CONTRIBUTING.md` — conventional commits required (cocogitto), branch model (main + short-lived feature branches), strict lint policy, how to run `just ci` locally, **per-crate READMEs are xtask-generated (`cargo run -p xtask -- gen-readmes`; edit `[package].description` in `Cargo.toml`, not `README.md` directly)**, **dep-selection rubric** (when adding a third-party crate: active commits within ~12 months, no open RustSec advisory, no yanked latest release; the check is review-time guidance — CI only enforces RustSec advisories via `cargo deny`).
-- `AGENTS.md` — AI-coding-assistant brief (≤200 lines): project quick facts (name `BiBEAM` / 비빔, edition 2024, latest stable Rust, no MSRV pin); commands cheat-sheet (`just fmt|lint|test|doc`, `cargo run -p xtask -- gen-readmes`); workspace-layout pointer (link to `docs/architecture.md`); strict-regime reminders (`#![forbid(unsafe_code)]`, conventional commits enforced by `cog verify`, pre-commit runs clippy + nextest + deny + machete + doc heavy via prek — see §4.7); pointer to `docs/threat-model.md` for security context; common pitfalls (no `cargo +nightly`, do not bypass `cog verify`, do not hand-edit per-crate `README.md`).
+- `AGENTS.md` — AI-coding-assistant brief (≤200 lines): project quick facts (name `BiBeam` / 비빔, edition 2024, latest stable Rust, no MSRV pin); commands cheat-sheet (`just fmt|lint|test|doc`, `cargo run -p xtask -- gen-readmes`); workspace-layout pointer (link to `docs/architecture.md`); strict-regime reminders (`#![forbid(unsafe_code)]`, conventional commits enforced by `cog verify`, pre-commit runs clippy + nextest + deny + machete + doc heavy via prek — see §4.7); pointer to `docs/threat-model.md` for security context; common pitfalls (no `cargo +nightly`, do not bypass `cog verify`, do not hand-edit per-crate `README.md`).
 - `SECURITY.md` — threat model summary, what's in/out of scope (NOT Tor-grade), responsible-disclosure email, no bug bounty yet.
 - `CHANGELOG.md` — empty `## [Unreleased]` block, keep-a-changelog format; auto-populated by release-plz / git-cliff.
 - `docs/architecture.md` — two-plane diagram (control = hybrid super-peer rendezvous; data = Model D+ shared exit pool), crate boundary map, request flow (register → match → handshake → tunnel).
@@ -1615,7 +1615,7 @@ Files this plan creates (none modified — only `.gitignore` is extended with a 
 | `.pre-commit-config.yaml` | prek hooks: pre-commit (heavy) + commit-msg (cog verify) + pre-push (cargo check) |
 | `.taplo.toml` | taplo formatter config — preserves hand-aligned `=` columns and single-line dep arrays |
 | `cog.toml` | cocogitto conventional commits |
-| `typos.toml` | spell-check ignore list (BiBEAM, 비빔) |
+| `typos.toml` | spell-check ignore list (BiBeam, 비빔) |
 | `.editorconfig` | editor consistency |
 | `Justfile` | dev tasks + `bootstrap` / `bootstrap-phase2` |
 | `.github/workflows/ci.yml` | fmt + clippy + test matrix + doc + deny + cov |
@@ -1649,7 +1649,7 @@ These four templates are documented here for the follow-up PR that activates the
 [changelog]
 header = """
 # Changelog\n
-All notable changes to BiBEAM follow Keep-a-Changelog (https://keepachangelog.com/en/1.1.0/) and SemVer (https://semver.org/spec/v2.0.0.html).\n
+All notable changes to BiBeam follow Keep-a-Changelog (https://keepachangelog.com/en/1.1.0/) and SemVer (https://semver.org/spec/v2.0.0.html).\n
 """
 body = """
 {% if version %}\

@@ -1,14 +1,14 @@
 #![forbid(unsafe_code)]
-//! `rustls` configuration for `BiBEAM`'s own coordinator-bound HTTPS.
+//! `rustls` configuration for `BiBeam`'s own coordinator-bound HTTPS.
 //!
-//! Per D-1, **user-application TLS is end-to-end and `BiBEAM`-transparent**:
+//! Per D-1, **user-application TLS is end-to-end and `BiBeam`-transparent**:
 //! when a user runs `curl https://example.com` over the tunnel, the
-//! TLS handshake terminates on `example.com`, not inside `BiBEAM`.
+//! TLS handshake terminates on `example.com`, not inside `BiBeam`.
 //! That means this crate does *not* hold a TLS server config or any
 //! kind of TLS interceptor. It owns exactly one thing in the TLS
 //! domain: the [`coordinator_client_config`] helper that builds a
 //! [`rustls::ClientConfig`] for the small set of HTTPS calls
-//! `bibeam-cli` and `bibeam-node` issue against the `BiBEAM`
+//! `bibeam-cli` and `bibeam-node` issue against the `BiBeam`
 //! coordinator (`reqwest` / `tokio-tungstenite` wired up in
 //! `bibeam-discovery`).
 //!
@@ -25,13 +25,13 @@
 //! 2. **No FFI surface.** `rustls-native-certs` pulls in
 //!    `security-framework` on macOS and `schannel` on Windows. Those
 //!    are stable but add transitive `unsafe` we do not need for the
-//!    `BiBEAM`-coordinator path, which only ever speaks to operator-
+//!    `BiBeam`-coordinator path, which only ever speaks to operator-
 //!    controlled endpoints with public-CA-issued certs.
 //! 3. **Smaller threat surface.** A compromised system trust store is
-//!    not an avenue to MITM the `BiBEAM` control plane when the trust
+//!    not an avenue to MITM the `BiBeam` control plane when the trust
 //!    anchors are baked into the binary.
 //!
-//! The trade-off is that `BiBEAM` will need a rebuild when Mozilla
+//! The trade-off is that `BiBeam` will need a rebuild when Mozilla
 //! ships a root-store update. That is acceptable for the coordinator
 //! path; user-application TLS termination still happens on the
 //! end-server with whatever roots the user's libcurl / browser already
@@ -42,7 +42,7 @@
 //! Per D-1, ECH (Encrypted Client Hello) lands as a follow-up PR once
 //! `rustls`'s ECH support stabilises. The MVP coordinator-bound HTTPS
 //! uses standard TLS 1.3 with SNI in cleartext; observers can see
-//! that a connection is heading to the `BiBEAM` coordinator. That is
+//! that a connection is heading to the `BiBeam` coordinator. That is
 //! acceptable because the coordinator's hostname is already public.
 
 use std::sync::Arc;
@@ -70,7 +70,7 @@ pub enum TlsConfigError {
     Versions(#[source] Box<rustls::Error>),
 }
 
-/// Build a [`rustls::ClientConfig`] suitable for `BiBEAM`'s own
+/// Build a [`rustls::ClientConfig`] suitable for `BiBeam`'s own
 /// coordinator-bound HTTPS calls.
 ///
 /// The returned config:

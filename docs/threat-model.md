@@ -6,8 +6,8 @@ The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the arch
 
 ## Out of scope (stated up front so creep cannot reintroduce them)
 
-- **Global passive adversary.** An attacker who can passively observe every link of the Internet simultaneously and correlate flows across them is **not** in the threat model. BiBEAM has no cover traffic, no Sphinx packet format, no constant-rate padding. If a deployment needs defense against this adversary, use Tor.
-- **Endpoint compromise.** A user whose machine is compromised loses to a key recovery and traffic-tap regardless of BiBEAM. Same for a coordinator host or an exit host. Defended at the OS/process layer (rootless containers, systemd hardening), not at the protocol layer.
+- **Global passive adversary.** An attacker who can passively observe every link of the Internet simultaneously and correlate flows across them is **not** in the threat model. BiBeam has no cover traffic, no Sphinx packet format, no constant-rate padding. If a deployment needs defense against this adversary, use Tor.
+- **Endpoint compromise.** A user whose machine is compromised loses to a key recovery and traffic-tap regardless of BiBeam. Same for a coordinator host or an exit host. Defended at the OS/process layer (rootless containers, systemd hardening), not at the protocol layer.
 - **Active TLS MITM by the exit with a forged CA the user trusts.** If the user has accepted a CA the exit also controls, the protocol cannot help.
 - **Physical-layer attacks.** Cold-boot key extraction, NIC firmware backdoors, etc.
 - **On-chain incentives, exit-operator slashing, reputation systems.** Out of scope for the MVP entirely.
@@ -37,7 +37,7 @@ The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the arch
 
 - Destination SNI: **not visible** on this hop. The user-to-exit link carries Noise-sealed traffic inside QUIC datagrams. The ISP sees only the exit's IP and a QUIC handshake, with no information about what the user is fetching.
 - Exit IP: visible. The ISP knows the user talks to this exit; it does not know what the user does through it.
-- Traffic volume and timing: visible. Long-term flow analysis can correlate that the user is online and using BiBEAM; it does not reveal the content.
+- Traffic volume and timing: visible. Long-term flow analysis can correlate that the user is online and using BiBeam; it does not reveal the content.
 
 **Mitigations.**
 
@@ -74,7 +74,7 @@ And does **not** know:
 - **PII redaction in operator logs.** Source IPs and peer IDs are hashed with a BLAKE3-keyed MAC before reaching log lines or metric labels; what the exit operator runs in memory is unavoidable, but what they retain on disk is not raw.
 - **Operator agreement (out-of-protocol).** Exit operators sign an acceptable-use policy at onboarding. A deterrent, not a cryptographic mitigation.
 
-**Honest bottom line.** A malicious exit operator can identify which of its current clients sent a given egress packet. BiBEAM does not defend against an exit that is actively logging its own ingress — it defends against an exit that is *passively curious* (the operator-agreement adversary) and against everyone downstream of the exit. Users who need defence against a malicious exit must rotate exits and avoid using the same exit across sessions where linkage matters; this is a usage discipline, not a protocol guarantee.
+**Honest bottom line.** A malicious exit operator can identify which of its current clients sent a given egress packet. BiBeam does not defend against an exit that is actively logging its own ingress — it defends against an exit that is *passively curious* (the operator-agreement adversary) and against everyone downstream of the exit. Users who need defence against a malicious exit must rotate exits and avoid using the same exit across sessions where linkage matters; this is a usage discipline, not a protocol guarantee.
 
 ### A curious coordinator operator
 
@@ -175,6 +175,6 @@ Client and exit each generate their own X25519 WG keypairs at registration time 
 
 - That a user under sustained, targeted correlation by a multi-AS adversary cannot be identified.
 - That a coordinator with the BLAKE3 log-key cannot reconstruct user behaviour from its own logs.
-- That a destination service that already fingerprints users (browser-level fingerprinting, login cookies) loses that ability when traffic arrives via BiBEAM. It does not.
+- That a destination service that already fingerprints users (browser-level fingerprinting, login cookies) loses that ability when traffic arrives via BiBeam. It does not.
 
-BiBEAM raises the cost of identifying any single user behind a foreign exit from "trivial" to "requires correlation across multiple observation points." That is the bargain.
+BiBeam raises the cost of identifying any single user behind a foreign exit from "trivial" to "requires correlation across multiple observation points." That is the bargain.

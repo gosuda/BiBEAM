@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! Connection-telemetry helpers for the `BiBEAM` transport layer.
+//! Connection-telemetry helpers for the `BiBeam` transport layer.
 //!
 //! F-TRANS.9 owns the `tracing` span / `metrics` counter naming for
 //! every observable on the data plane: WG handshake start / complete,

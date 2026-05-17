@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! Optional re-export of [`mimalloc::MiMalloc`] for the server-side binary.
 //!
-//! `BiBEAM`'s server-side binary (`bibeam-node` — merged coord + data-plane
+//! `BiBeam`'s server-side binary (`bibeam-node` — merged coord + data-plane
 //! role per §11 R-1) and the client-side daemon (`bibeam-cli`) want a faster
 //! global allocator than the platform default `malloc` under sustained
 //! connection churn. mimalloc gives a consistent throughput uplift on the

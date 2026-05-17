@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! UTC timestamp wrapper around [`time::OffsetDateTime`].
 //!
-//! All `BiBEAM` core types that need a "when did this happen" field hold a
+//! All `BiBeam` core types that need a "when did this happen" field hold a
 //! [`Timestamp`] rather than reaching for [`time::OffsetDateTime`] directly.
 //! That keeps wire/serde encoding uniform (RFC 3339) and gives us a single
 //! choke point if we ever need to swap the underlying representation.

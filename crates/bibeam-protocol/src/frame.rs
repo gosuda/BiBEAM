@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! Wire-frame envelope shared by every `BiBEAM` transport.
+//! Wire-frame envelope shared by every `BiBeam` transport.
 //!
 //! Every message on the wire begins with [`MAGIC`] (`b"BIBM"`) followed by
 //! the one-byte [`VERSION`] tag. The remaining bytes are a postcard-encoded
@@ -24,9 +24,9 @@ use crate::cohort::CohortMessage;
 use crate::control::ControlMessage;
 use crate::tunnel::Tunnel;
 
-/// Four-byte magic prefix written at the start of every `BiBEAM` frame.
+/// Four-byte magic prefix written at the start of every `BiBeam` frame.
 ///
-/// Spelled `BIBM` so a packet capture of any `BiBEAM` flow is recognisable
+/// Spelled `BIBM` so a packet capture of any `BiBeam` flow is recognisable
 /// without consulting a decoder. The receiver MUST reject any buffer whose
 /// first four bytes do not match this constant.
 pub const MAGIC: [u8; 4] = *b"BIBM";

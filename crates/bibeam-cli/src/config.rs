@@ -128,7 +128,7 @@ pub(crate) struct Config {
     reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
 )]
 pub(crate) fn config_dir() -> Result<PathBuf, ConfigError> {
-    let dirs = directories::ProjectDirs::from("", "BiBEAM", "bibeam").ok_or(ConfigError::NoHome)?;
+    let dirs = directories::ProjectDirs::from("", "BiBeam", "bibeam").ok_or(ConfigError::NoHome)?;
     Ok(dirs.config_dir().to_owned())
 }
 

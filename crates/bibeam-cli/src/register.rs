@@ -267,7 +267,7 @@ impl StatePaths {
                   Today's integration tests use `StatePaths::under` with a temp dir."
     )]
     pub(crate) fn default_for_platform() -> Option<Self> {
-        let dirs = directories::ProjectDirs::from("", "BiBEAM", "bibeam")?;
+        let dirs = directories::ProjectDirs::from("", "BiBeam", "bibeam")?;
         Some(Self::under(dirs.config_dir()))
     }
 }

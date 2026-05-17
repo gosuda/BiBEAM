@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! ULID newtypes for the `BiBEAM` identity space.
+//! ULID newtypes for the `BiBeam` identity space.
 //!
 //! Four distinct wrappers — [`PeerId`], [`NodeId`], [`CohortId`], [`ChainId`]
 //! — sit over [`ulid::Ulid`] so the type system can distinguish a peer from a
@@ -76,7 +76,7 @@ macro_rules! ulid_newtype {
 }
 
 ulid_newtype! {
-    /// Identifier for a single remote peer in the `BiBEAM` mesh.
+    /// Identifier for a single remote peer in the `BiBeam` mesh.
     PeerId
 }
 

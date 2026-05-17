@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! `BiBEAM` workspace ops runner. Hosts cross-cutting maintenance subcommands.
+//! `BiBeam` workspace ops runner. Hosts cross-cutting maintenance subcommands.
 //! Current subcommands:
 //!   - `gen-readmes`         — write per-crate `README.md` from each member's `[package].description`.
 //!   - `gen-readmes --check` — drift gate; exit non-zero if any README does not match what would be generated.

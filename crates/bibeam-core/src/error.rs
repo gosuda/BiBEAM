@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-//! Top-level error type for the `BiBEAM` core crate.
+//! Top-level error type for the `BiBeam` core crate.
 //!
 //! [`enum@Error`] groups failures by class — config / crypto / transport /
 //! protocol / storage / geoip / io — so downstream callers can match on the

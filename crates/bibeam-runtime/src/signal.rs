@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! Async helper that resolves on the first OS shutdown signal.
 //!
-//! [`shutdown_signal`] is the canonical way for a `BiBEAM` daemon's
+//! [`shutdown_signal`] is the canonical way for a `BiBeam` daemon's
 //! main task to wait for an external stop. The future resolves
 //! when:
 //!

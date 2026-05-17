@@ -25,7 +25,7 @@ use figment::{
 use serde::{Deserialize, de::DeserializeOwned};
 use thiserror::Error;
 
-/// Environment-variable prefix shared by every `BiBEAM` binary's
+/// Environment-variable prefix shared by every `BiBeam` binary's
 /// configuration overlay. A variable named `BIBEAM_FOO__BAR`
 /// populates the `foo.bar` field of the loaded struct (the double
 /// underscore is the nested-key separator; single underscores are

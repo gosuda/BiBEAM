@@ -1,4 +1,4 @@
-# BiBEAM (비빔)
+# BiBeam (비빔)
 
 [![ci](https://img.shields.io/badge/ci-stable--linux--macos--windows-blue)](./.github/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -56,4 +56,4 @@ Per-crate `README.md` files are **generated** by `cargo run -p xtask -- gen-read
 
 ## License
 
-MIT — see [LICENSE](./LICENSE). Copyright the BiBEAM contributors.
+MIT — see [LICENSE](./LICENSE). Copyright the BiBeam contributors.

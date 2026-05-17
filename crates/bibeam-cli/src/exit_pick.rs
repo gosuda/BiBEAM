@@ -29,7 +29,7 @@
 //! retry / fallback to multi-hop" per §11 R-3 refusal semantics —
 //! see the [audit-log on region mismatch] tracker (R-REGION.3).
 //!
-//! [audit-log on region mismatch]: https://github.com/bibeam-net/BiBEAM/issues
+//! [audit-log on region mismatch]: https://github.com/bibeam-net/BiBeam/issues
 //!
 //! ## RNG injection
 //!

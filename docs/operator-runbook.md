@@ -20,8 +20,8 @@ There is **no** REST API, **no** `/metrics`, **no** `/healthz`, **no** `/readyz`
 ### Build
 
 ```bash
-git clone https://github.com/gosuda/BiBEAM.git
-cd BiBEAM
+git clone https://github.com/gosuda/BiBeam.git
+cd BiBeam
 
 # install Phase 1 dev tooling once
 just bootstrap
@@ -51,7 +51,7 @@ just ci   # fmt + clippy -D warnings + nextest + doc -D warnings + deny + machet
 
 `just ci` is what CI runs. Green locally means green in CI.
 
-There is no production deployment of BiBEAM at Phase 1. Do **not** put these binaries on a public host expecting them to do anything.
+There is no production deployment of BiBeam at Phase 1. Do **not** put these binaries on a public host expecting them to do anything.
 
 ---
 
@@ -93,7 +93,7 @@ The single `bibeam-node` binary services both roles (per §11 R-1); the unit bel
 
 ```ini
 [Unit]
-Description=BiBEAM node (control + data plane, is_coordinator = true)
+Description=BiBeam node (control + data plane, is_coordinator = true)
 After=network-online.target
 Wants=network-online.target
 
@@ -135,7 +135,7 @@ WantedBy=multi-user.target
 
 ```ini
 [Unit]
-Description=BiBEAM node (relay + exit daemon)
+Description=BiBeam node (relay + exit daemon)
 After=network-online.target
 Wants=network-online.target
 

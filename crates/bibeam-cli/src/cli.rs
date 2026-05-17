@@ -58,7 +58,7 @@ pub(crate) enum Cmd {
     /// Write a default config file at the platform's standard
     /// location.
     Init,
-    /// Start the `BiBEAM` daemon. Defaults to TUN-mode; falls
+    /// Start the `BiBeam` daemon. Defaults to TUN-mode; falls
     /// back to the SOCKS5 listener when TUN setup fails (F-CLI.8).
     Up {
         /// Coordinator invite code. When absent the daemon prompts

@@ -4,7 +4,7 @@
 //! Per F-TRANS.7's scope: `bibeam-cli` hosts a local SOCKS5 server so
 //! a user on a restricted network — typical reasons: corporate
 //! laptop, Android without root, Windows without admin — can route
-//! application traffic through `BiBEAM` without standing up a kernel
+//! application traffic through `BiBeam` without standing up a kernel
 //! TUN. The actual SOCKS5-to-`WgTunnel` bridging lives in `bibeam-cli`
 //! (F-CLI.8); this module ships exactly the server-start API.
 //!

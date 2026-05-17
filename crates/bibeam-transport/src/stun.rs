@@ -2,7 +2,7 @@
 //! Minimal RFC 8489 STUN client — just enough to learn our public
 //! UDP address from a configured STUN server.
 //!
-//! `BiBEAM` does not need full STUN, ICE, or TURN here. F-TRANS.4
+//! `BiBeam` does not need full STUN, ICE, or TURN here. F-TRANS.4
 //! exists for one job: when a peer is sitting behind a NAT, find out
 //! what `(public_ip, public_port)` the NAT has mapped its socket to,
 //! so the coordinator can hand that address to other cohort members

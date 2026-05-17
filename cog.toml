@@ -10,7 +10,7 @@ tag_prefix = "v"
 path = "CHANGELOG.md"
 template = "remote"
 remote = "github.com"
-repository = "BiBEAM"
+repository = "BiBeam"
 owner = "gosuda"
 authors = []
 

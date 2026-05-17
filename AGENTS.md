@@ -4,7 +4,7 @@ This file gives an AI coding assistant the minimum it needs to make a useful fir
 
 ## Quick facts
 
-- **Project.** BiBEAM (브랜드 케이스), 비빔 in Hangul; also expanded as Bidirectional-Beam (Bi-Beam). The name doubles as etymology (Korean *bibimbap*) and design metaphor (a bidirectional beam linking peers). Identifier `bibeam` (lowercase). Never substitute hanja, never romanize the Hangul to `bibim`.
+- **Project.** BiBeam (브랜드 케이스), 비빔 in Hangul; also expanded as Bidirectional-Beam (Bi-Beam). The name doubles as etymology (Korean *bibimbap*) and design metaphor (a bidirectional beam linking peers). Identifier `bibeam` (lowercase). Never substitute hanja, never romanize the Hangul to `bibim`.
 - **Edition.** Rust 2024 (`resolver = "3"`).
 - **Toolchain.** Latest stable. **No MSRV pin.** `rust-toolchain.toml` declares `channel = "stable"`. CI runs `dtolnay/rust-toolchain@stable`. There is no nightly, no per-version matrix, no `cargo +nightly` anywhere.
 - **Phase.** Phase 1 init complete + plan §11 revisions landed. The 10 crates carry real implementations (frames, codec, crypto, transport, TUN, discovery, runtime, coord, node forwarder, exit-mode, CLI). What's NOT yet wired: the `bibeam-node` supervisor that composes the F-NODE.* modules into a single running daemon (each module's unit + integration tests pass; the binary's `src/main.rs` is the §0.2a placeholder per the original plan).
@@ -45,7 +45,7 @@ See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map,
 
 ## Security context
 
-[`docs/threat-model.md`](./docs/threat-model.md) is the canonical list of adversaries and what each can see. BiBEAM is **not** Tor: there is no global passive adversary in scope, no cover traffic, no Sphinx packets. If a proposed change implies otherwise, push back.
+[`docs/threat-model.md`](./docs/threat-model.md) is the canonical list of adversaries and what each can see. BiBeam is **not** Tor: there is no global passive adversary in scope, no cover traffic, no Sphinx packets. If a proposed change implies otherwise, push back.
 
 ## Common pitfalls
 

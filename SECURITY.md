@@ -1,10 +1,10 @@
 # Security
 
-BiBEAM is in **Phase 1 init scaffold**. No protocol code has been written yet; there is nothing to attack on the data plane. This file describes the threat model BiBEAM is designed against, the disclosure path for when there is something to disclose, and what is explicitly out of scope.
+BiBeam is in **Phase 1 init scaffold**. No protocol code has been written yet; there is nothing to attack on the data plane. This file describes the threat model BiBeam is designed against, the disclosure path for when there is something to disclose, and what is explicitly out of scope.
 
 ## Threat model — summary
 
-BiBEAM is **not** Tor and does not aim to be. Full enumeration lives in [`docs/threat-model.md`](./docs/threat-model.md); the headline:
+BiBeam is **not** Tor and does not aim to be. Full enumeration lives in [`docs/threat-model.md`](./docs/threat-model.md); the headline:
 
 **In scope.**
 
@@ -17,9 +17,9 @@ BiBEAM is **not** Tor and does not aim to be. Full enumeration lives in [`docs/t
 
 **Out of scope (explicitly).**
 
-- A **global passive adversary** that can correlate traffic across every link simultaneously. BiBEAM is not a mixnet. There is no cover traffic, no Sphinx packet format, no on-chain incentive layer.
+- A **global passive adversary** that can correlate traffic across every link simultaneously. BiBeam is not a mixnet. There is no cover traffic, no Sphinx packet format, no on-chain incentive layer.
 - An exit operator that actively MITMs TLS to their own clients with a forged CA — outside the protocol's authority.
-- Endpoint compromise (a user's machine, a coordinator host, an exit host) — defended by operating-system controls, not by BiBEAM.
+- Endpoint compromise (a user's machine, a coordinator host, an exit host) — defended by operating-system controls, not by BiBeam.
 - Physical-layer or NIC-firmware attacks.
 
 ## Admission

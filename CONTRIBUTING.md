@@ -1,4 +1,4 @@
-# Contributing to BiBEAM
+# Contributing to BiBeam
 
 Thanks for reading before opening a PR. The rules below are enforced by hooks and CI; the rationale is in the linked plan or doc.
 
