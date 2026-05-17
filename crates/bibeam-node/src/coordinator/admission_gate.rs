@@ -70,7 +70,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
+use bibeam_core::{CohortId, NodeId, PeerId};
 use bibeam_protocol::control::{MatchResponse, SingleHopMatch};
 use parking_lot::Mutex;
 
@@ -144,15 +144,6 @@ pub enum AdmissionOutcome {
 struct PendingAdmission {
     peer_id: PeerId,
     cohort_id: CohortId,
-    #[allow(
-        dead_code,
-        reason = "Reserved for the F-COORD.6 rotation scheduler / \
-                  F-COORD.9 rate-limit / F-COORD.10 audit hooks that \
-                  read enqueue time to decide whether a waiter has \
-                  exceeded its bucket SLO. The field round-trips \
-                  through drain_ready unmodified."
-    )]
-    enqueued_at: Timestamp,
     response_tx: tokio::sync::oneshot::Sender<MatchResponse>,
 }
 
@@ -267,7 +258,6 @@ impl AdmissionGate {
         let pending_entry = PendingAdmission {
             peer_id,
             cohort_id,
-            enqueued_at: Timestamp::now(),
             response_tx,
         };
         self.upsert_pending_entry(region, pending_entry);

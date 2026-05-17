@@ -284,15 +284,20 @@ impl RelayFrame {
     reason = "test-only convenience for unwrapping known-good codec round-trips"
 )]
 mod tests {
+    //! Unit tests in this module cover the `RelayFrame` encode/decode
+    //! contract — the fixed-prefix data-plane layout that does NOT ride
+    //! the postcard envelope, so it needs its own hand-written byte-
+    //! layout coverage here.
+    //!
+    //! Wire-format round-trip coverage for the postcard-encoded
+    //! control-plane structs declared in this module — [`WgPeerConfig`]
+    //! and [`ForwarderLease`] — lives in
+    //! `crates/bibeam-protocol/tests/codec_roundtrip.rs` as the
+    //! property-based strategies `arb_wg_peer_config` and
+    //! `arb_forwarder_lease`, which exercise varied generated cases
+    //! (random field values with shrinking on failure).
+
     use super::*;
-    use core::net::{IpAddr, Ipv4Addr, SocketAddr};
-
-    use bibeam_core::Timestamp;
-    use time::OffsetDateTime;
-
-    fn fixture_socket() -> SocketAddr {
-        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 7)), 51_820)
-    }
 
     #[test]
     fn relay_frame_round_trip_at_typical_wg_mtu() {
@@ -338,46 +343,5 @@ mod tests {
             let result = RelayFrame::decode(&buf);
             assert!(result.is_err(), "buffer of length {short_len} must error, got {result:?}");
         }
-    }
-
-    #[test]
-    fn wg_peer_config_postcard_round_trip() {
-        // Contract: WgPeerConfig encodes through postcard's binary
-        // form (the codec used by Frame). Catches a regression that
-        // changes a field's wire shape — including the IpNet entry,
-        // which has both a human-readable (string) and binary
-        // (newtype-variant) serde branch.
-        let config = WgPeerConfig {
-            local_static_public: WgPublicKey::from_bytes([7u8; WG_KEY_LEN]),
-            peer_static_public: WgPublicKey::from_bytes([9u8; WG_KEY_LEN]),
-            peer_endpoint: fixture_socket(),
-            allowed_ips: vec![
-                "0.0.0.0/0".parse().expect("parse v4 cidr"),
-                "::/0".parse().expect("parse v6 cidr"),
-            ],
-            persistent_keepalive_secs: 25,
-        };
-        let encoded = postcard::to_stdvec(&config).expect("postcard encode");
-        let decoded: WgPeerConfig = postcard::from_bytes(&encoded).expect("postcard decode");
-        assert_eq!(decoded, config);
-    }
-
-    #[test]
-    fn forwarder_lease_postcard_round_trip() {
-        // Contract: ForwarderLease encodes through postcard. Catches
-        // a regression that changes the Timestamp serialisation or
-        // the SocketAddr field order.
-        let lease = ForwarderLease {
-            forwarder: NodeId::new(),
-            chain_id: ChainId::new(),
-            allowed_src: fixture_socket(),
-            allowed_dst: fixture_socket(),
-            lease_expires_at: Timestamp::from_offset_date_time(
-                OffsetDateTime::UNIX_EPOCH + time::Duration::seconds(1_700_000_000),
-            ),
-        };
-        let encoded = postcard::to_stdvec(&lease).expect("postcard encode");
-        let decoded: ForwarderLease = postcard::from_bytes(&encoded).expect("postcard decode");
-        assert_eq!(decoded, lease);
     }
 }
