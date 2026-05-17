@@ -11,14 +11,14 @@ This file gives an AI coding assistant the minimum it needs to make a useful fir
 ## Commands
 
 ```bash
-# format / lint / test / doc — match what hooks and CI run
+# format / lint / test / doc / supply-chain — match what hooks and CI run
 just fmt       # cargo fmt --all
 just lint      # cargo clippy --workspace --all-targets --all-features -- -D warnings
 just test      # cargo nextest run --workspace --all-features
 just doc       # RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
 
-# full local CI pipeline
-just ci
+# format / lint / test / doc / supply-chain — match what hooks and CI run
+just ci       # fmt-check + lint + test + doc + deny + machete (see Justfile:41)
 
 # per-crate README regeneration (do this after editing any Cargo.toml description)
 cargo run -p xtask -- gen-readmes          # write
@@ -27,15 +27,17 @@ cargo run -p xtask -- gen-readmes --check  # drift gate
 
 `just bootstrap` (run once per dev machine) installs `prek`, `cargo-nextest`, `typos-cli`, `cocogitto`, and `taplo-cli`, then arms the git hooks via `prek install`.
 
+`just bootstrap-phase2` (only after the first real feature PR) installs the release stack: `git-cliff`, `release-plz`, `cargo-dist` (see Justfile:52).
+
 ## Workspace layout
 
 See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map, the two-plane control/data split, and the request flow. The ten crates live under `crates/`:
 
 ## Strict regime — non-negotiable
 
-- Clippy runs `pedantic` + `nursery` + `cargo` groups at `warn` plus a surgical restriction-deny list (no `panic`, `unwrap_used`, `expect_used`, `todo`, `unimplemented`, `unreachable`, `dbg_macro`, `print_stdout`, `print_stderr`, `mem_forget`, `unwrap_in_result`, `let_underscore_must_use` in non-test code). CI invokes `-D warnings`.
+- Clippy runs `pedantic` + `nursery` + `cargo` groups at `warn` plus a surgical restriction-deny list (see full list + rust/rustdoc lints in [`Cargo.toml`](./Cargo.toml):174-201; tests exempt via [`clippy.toml`](./clippy.toml):16-20). CI invokes `-D warnings`.
 - **Cognitive complexity ≤ 15** per function. State machines that legitimately exceed it may carry `#[allow(clippy::cognitive_complexity)]` with a justification in the commit body.
-- **Conventional Commits required.** `cog verify` runs at commit-msg time. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for accepted types.
+- **Conventional Commits required.** `cog verify` runs at commit-msg time. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for accepted types, branch policy, review axes (Correctness > Hygiene > Footprint), and the 5-point dep rubric.
 - **Per-crate READMEs are generated.** Never hand-edit `crates/*/README.md`. Edit the `[package].description` and run `cargo run -p xtask -- gen-readmes`.
 
 ## Security context
@@ -50,22 +52,31 @@ See [`docs/architecture.md`](./docs/architecture.md) for the crate boundary map,
 - Using `std::sync::Mutex` / `std::sync::RwLock` — `clippy.toml` disallows them in favor of `parking_lot` equivalents.
 - Using `chrono::DateTime` — `clippy.toml` disallows it in favor of `time::OffsetDateTime`.
 - Using `println!` / `eprintln!` / `dbg!` in non-test code — disallowed by the restriction lints. Use `tracing` macros.
-- Re-implementing what already exists. The anonymity-set ≥30 floor IS enforced today (`crates/bibeam-node/src/coordinator/admission_gate.rs` — R-FLOOR per-region partition + `NoAnonymousPathAvailable` refusal per R-3 formalism). Genuinely Phase 2 / not-yet-implemented: release-plz, cargo-dist, dependabot, coordinator replication protocol (P2A-1 only recorded the decision).
+- Re-implementing what already exists. The anonymity-set ≥30 floor (R-3) IS enforced today (`crates/bibeam-node/src/coordinator/admission_gate.rs` — R-FLOOR per-region partition + `NoAnonymousPathAvailable` refusal). Phase-2 release tooling (release-plz, cargo-dist, dependabot, git-cliff) now has committed configs + `just bootstrap-phase2`; publish/installers still gated. Full enablement is future work.
+- Bypassing the heavy pre-commit surface (prek-managed, see [`.pre-commit-config.yaml`](./.pre-commit-config.yaml):35-71). The policy is deliberate: fail on fmt/taplo/typos/xtask/clippy/nextest/deny/machete/doc *before* you write a commit message that `cog verify` will then reject (rationale in [`CONTRIBUTING.md`](./CONTRIBUTING.md):29-35).
 - Hyphenated negative prefixes in comments (the three-letter form starting with `m`, hyphen, then a verb such as `paired` / `keyed` / `bind` / `classified` / `delivered`) trip the `typos` pre-commit hook because that three-letter token is read as a misspelling of `miss` / `mist`. Use `wrongly <verb>` or rewrite the phrase. The hook also enforces `unparsable` over the alternate spelling with an `e`.
 - Adding a third-party dependency without checking the rubric in [`CONTRIBUTING.md`](./CONTRIBUTING.md) — active in the last 12 months, no RustSec advisory, latest release not yanked.
+- Treating `docs/protocol.md`, root `PLAN.md`, or `docs/plan/tasks.md` as current. They contain pre-D-4 (QUIC/Noise) and pre-resolution (pending docs-only PR) text. Canonical sources: [`docs/architecture.md`](./docs/architecture.md):54 (data plane) + [`docs/threat-model.md`](./docs/threat-model.md):122 (multi-hop + R-3) + [`docs/plan/init.md`](./docs/plan/init.md):13 (MSRV/prek corrections).
 
 ## Picked design decisions (D-* + R-*)
 
-Quick reference so you don't grep the plan-doc on every change. Full rationale lives in `docs/plan/init.md` §11; the docs themselves are the source of record for downstream readers.
+Quick reference. Full grounding lives in [`docs/architecture.md`](./docs/architecture.md) (Operational decisions + two-plane crate map) + [`docs/threat-model.md`](./docs/threat-model.md):112 (R-1/R-3/D-6 sections) + [`docs/plan/init.md`](./docs/plan/init.md):13 (MSRV/prek/lefthook pivots + 0.2c corrections) + [`docs/plan/init.md`](./docs/plan/init.md):66 (original 17 decisions). The old "§11" pointers are stale post-correction; decisions were moved into architecture + threat-model.
 
-- **D-1** ECH (Encrypted ClientHello): **deferred** at MVP — wired through F-TRANS.2's rustls config + F-CLI.7 `--ech-policy` flag; default `Deferred`.
-- **D-3** Exit-mode forwarding: **L3 via `tun-rs` + kernel NAT44/66** (primary), **L4 via `fast-socks5`** (fallback when TUN unavailable).
-- **D-4** VPN protocol family: **WireGuard wire-compat via `boringtun`** end-to-end (clients see a stock WG peer).
-- **D-5** GeoIP region cross-check: **warn-only** at MVP. Mismatch emits `AuditKind::RegionMismatch`; admission proceeds.
-- **D-6** Multi-hop construction: **option (c) — stateful UDP forwarder + end-to-end client↔exit WG** (TURN-style). Intermediates see address pair + ciphertext, never plaintext. Verified by the `forwarder_relays_opaque_payload_byte_preserving` integration test in `crates/bibeam-node/tests/multihop_e2e.rs`.
-- **R-2** Region is operator-tagged free-form `String` on `PeerRecord`/`RelayRecord`/`ExitRecord`; coord cross-checks against GeoIP per D-5. (R-1 — coord-crate dissolution — is documented inline above in *Workspace layout*; not repeated here.)
-- **R-3** Per-position anonymity floor is **topology-only**: every position p in a multi-hop path must independently satisfy `|position_cohort(C, p)| + 1 ≥ 30`. **No union across hops** (an earlier draft's union claim was rejected by review). Under-floor → refuse, don't auto-route.
-- **R-MULTIHOP-PROTO** packet-to-lease binding: **option (B)** — explicit `RelayFrame { chain_id, wg_payload }` encapsulation. Coord NEVER holds WG private keys; client + exit each generate their own keypairs at registration and publish only public keys.
+- **D-1** ECH (Encrypted ClientHello): **best-effort** when rustls supports it for BiBeam's own coordinator TLS (CLI/node → coord); user-app ECH is transparent end-to-end. Policy knob `ech = "best-effort" | "deferred"` (CLI default `Deferred`). (arch:67, threat:11, cli/config.rs:51)
+- **D-3** Exit-mode forwarding: **L3 via `tun-rs` + kernel NAT44/66** (primary), **L4 via `fast-socks5`** (fallback when TUN unavailable). (arch:127, plan/tasks:114)
+- **D-4** VPN protocol family: **WireGuard wire-compat via `boringtun`** end-to-end (clients see a stock WG peer). (arch:56,69, threat:122)
+- **D-5** GeoIP region cross-check: **warn-only** at MVP (`AuditKind::RegionMismatch`); admission proceeds. Region = free-form operator `String` (R-2). (region_verify.rs:1, admission_gate.rs:131)
+- **D-6** Multi-hop construction: **option (c)** — stateful UDP forwarder + *end-to-end* client↔exit WG (TURN-style). Intermediates see only addr pair + ciphertext. (arch:56, threat:122-166)
+- **R-1** (coord-crate dissolution): single `bibeam-node` binary; `is_coordinator` flag mounts the axum+redb admission module. Coord + data keys in same process (operators should physically separate). (arch:52, threat:114)
+- **R-2** Region is operator-tagged free-form `String` on records; coord cross-checks vs GeoIP (ISO-3166) + allowlist CIDRs; per-region partitioning prevents anon-set pollution.
+- **R-3** Per-position anonymity floor is **topology-only** (≥30 at *every* hop independently; **no cross-hop union**). Under-floor → refuse (`NoAnonymousPathAvailable`, one fresh audit row per drain poll). Region-isolated. (admission_gate.rs:186-240,300, threat:160)
+- **R-MULTIHOP-PROTO** packet-to-lease binding: **option (B)** — explicit `RelayFrame { chain_id, wg_payload }`. Coord **never** holds WG X25519 private keys (client + exit mint locally at registration, publish only pubkeys). (threat:164, multihop.rs:206)
+
+**Cross-cutting invariants (expensive to rediscover):**
+- **Data / control plane split** (arch:7): control crates (`discovery`, crypto PASETO, `node/coordinator/`) never see WG private keys or inner traffic; data crates (`tun`, `transport/wg_*`, exit) never perform admission or issue tokens. Any change must respect the boundary.
+- **Key custody + forwarder visibility** (D-6/R-4): intermediates see only outer address + WG ciphertext shape; never plaintext, transport keys, or identities. Coord is a pairing service only.
+- **Anonymity floor mechanics** (R-3 + R-2): per-position + per-region + per-poll audit (no dedup, no continuous re-gate between rotations). Refuse rather than route. One audit row per poll for operator visibility.
+- **Historical pivot record** (plan/init.md:13): MSRV pin removed (0.2c), lefthook → prek, "latest stable only, no dedicated MSRV CI job". The "why no pin" rationale lives only in the correction notes.
 
 ## Where to look first
 
@@ -73,4 +84,8 @@ Quick reference so you don't grep the plan-doc on every change. Full rationale l
 - A new hook failure: [`.pre-commit-config.yaml`](./.pre-commit-config.yaml).
 - A CI failure that does not reproduce locally: the [GitHub workflow](./.github/workflows/ci.yml) runs three operating systems; macOS and Windows runners catch path and line-ending issues.
 - A "where does this fit?" question: [`docs/architecture.md`](./docs/architecture.md).
-- A "why does the scaffold look like this?" question: [`docs/plan/init.md`](./docs/plan/init.md) — the spec that drove Phase 1.
+- A "why does the scaffold look like this?" question: [`docs/plan/init.md`](./docs/plan/init.md) — the spec that drove Phase 1 (plus corrections at :13).
+- Supply-chain policy or new third-party dep: [`deny.toml`](./deny.toml) (yanked=deny, "Revisit by YYYY-MM-DD" ignore convention, license allowlist, bans, graph.all-features) + [`CONTRIBUTING.md`](./CONTRIBUTING.md):58-68 (5-point rubric) + :70 (review axes).
+- Release / changelog / dist automation: [`release-plz.toml`](./release-plz.toml), [`dist-workspace.toml`](./dist-workspace.toml), [`cliff.toml`](./cliff.toml) (parser order critical for `chore(release)`), [`cog.toml`](./cog.toml), [`.github/dependabot.yml`](./.github/dependabot.yml) (weekly groups).
+- Formatting + cross-OS churn prevention: [`.taplo.toml`](./.taplo.toml) (reorder_keys/arrays=false to protect Cargo.lock), [`.editorconfig`](./.editorconfig) (2-space for toml/yml + md no-trim), [`rustfmt.toml`](./rustfmt.toml), [`.cargo/config.toml`](./.cargo/config.toml) (retry=3, git-fetch-with-cli).
+- Hook surface + prek policy: [`.pre-commit-config.yaml`](./.pre-commit-config.yaml) (heavy pre-commit vs light pre-push, fail_fast=false, nextest --no-tests=warn in hook, xtask --release gen-readmes --check).
