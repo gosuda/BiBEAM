@@ -1,0 +1,54 @@
+[changelog]
+header = """
+# Changelog\n
+All notable changes to BiBeam follow Keep-a-Changelog (https://keepachangelog.com/en/1.1.0/) and SemVer (https://semver.org/spec/v2.0.0.html).\n
+"""
+body = """
+{% if version %}\
+### [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+### [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+#### {{ group | upper_first }}
+{% for commit in commits %}\
+- {% if commit.breaking %}**BREAKING** {% endif %}{{ commit.message | upper_first }}{% if commit.id %} ({{ commit.id | truncate(length=7, end="") }}){% endif %}
+{% endfor %}\
+{% endfor %}\n
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+tag_pattern = "v[0-9]*"
+sort_commits = "newest"
+
+[[git.commit_parsers]]
+message = "^feat"
+group = "Features"
+[[git.commit_parsers]]
+message = "^fix"
+group = "Bug Fixes"
+[[git.commit_parsers]]
+message = "^perf"
+group = "Performance"
+[[git.commit_parsers]]
+message = "^refactor"
+group = "Refactor"
+[[git.commit_parsers]]
+message = "^docs?"
+group = "Documentation"
+[[git.commit_parsers]]
+message = "^test"
+group = "Tests"
+# Release commits must be skipped BEFORE the broad chore/ci/build matcher;
+# git-cliff applies parsers in declaration order and first match wins.
+# Fixes §10.1's ordering bug (release-skip was unreachable behind the chore group).
+[[git.commit_parsers]]
+message = "^chore\\(release\\)"
+skip = true
+[[git.commit_parsers]]
+message = "^(chore|ci|build)"
+group = "Build & CI"
