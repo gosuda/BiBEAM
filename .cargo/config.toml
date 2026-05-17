@@ -2,17 +2,8 @@
 git-fetch-with-cli = true
 retry = 3
 
-# Optional faster linker for incremental Linux builds. Commented out by default
-# because lld is not installed everywhere; uncommenting will break `cargo build`
-# on hosts that lack lld. Opt in locally by either:
-#   (a) uncommenting both stanzas below, OR
-#   (b) placing them in a developer-local `.cargo/config.toml` in a parent dir
-#       (or `$CARGO_HOME/config.toml`) instead of editing the repo.
-# CI installs lld explicitly in `.github/workflows/ci.yml` if/when fast linking
-# is wanted; see that workflow for the canonical opt-in path.
-#
-# [target.x86_64-unknown-linux-gnu]
-# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-#
-# [target.aarch64-unknown-linux-gnu]
-# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+# Linker selection (e.g. `-C link-arg=-fuse-ld=lld`) lives at the developer
+# layer, not in this repo-tracked config: hardcoding `lld` here would break
+# `cargo build` on Linux hosts that lack the linker. The canonical opt-in
+# paths are documented in `docs/operator-runbook.md` and (for CI) in
+# `.github/workflows/ci.yml`.
