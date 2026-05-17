@@ -36,7 +36,6 @@ anyhow = { workspace = true }
 mimalloc = { workspace = true }
 # --- absorbed from the dissolved bibeam-coordinator crate (R-MERGE.1; §11 R-1) ---
 axum = { workspace = true }
-tower = { workspace = true }
 redb = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -89,9 +88,14 @@ tokio = { workspace = true, features = ["test-util"] }
 # the loop. Production cert provisioning is F-TRANS.2's concern. ---
 rcgen = { workspace = true }
 rustls = { workspace = true }
+# --- coordinator/server.rs tests use `tower::ServiceExt as _` to drive the axum
+# `Router` directly in-process; this is test-only — axum provides `ServiceExt`
+# transitively in production via its own tower dep. (Demoted from `[dependencies]`
+# per X-1 cleanup sweep finding; verified zero non-test uses.) ---
+tower = { workspace = true }
 
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "thiserror", "mimalloc", "axum", "tower", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot", "rustls"]
+ignored = ["bibeam-core", "bibeam-protocol", "bibeam-crypto", "bibeam-transport", "bibeam-tun", "bibeam-discovery", "bibeam-runtime", "tokio-util", "fast-socks5", "thiserror", "mimalloc", "axum", "redb", "serde", "serde_json", "postcard", "time", "blake3", "ulid", "governor", "parking_lot", "rustls"]
