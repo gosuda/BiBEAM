@@ -63,7 +63,7 @@ impl DnsResolver {
     /// the cap (hickory falls back to its own default of `MAX_TTL`).
     ///
     /// If `/etc/resolv.conf` (or the Windows registry equivalent) is missing,
-    /// unparseable, or has no nameserver entries, this falls back to
+    /// unparsable, or has no nameserver entries, this falls back to
     /// Cloudflare's `1.1.1.1` / `1.0.0.1`. The fallback is logged via
     /// `tracing::warn!`; introspect with [`Self::using_fallback`].
     pub fn new(cache_ttl_secs: u64) -> Result<Self, CoreError> {

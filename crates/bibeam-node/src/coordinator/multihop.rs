@@ -601,7 +601,7 @@ mod tests {
         // floor returns a SingleHop response carrying that exit. The
         // multi-hop branch must NOT be taken when the direct path is
         // already busy enough to support the anonymity set. Catches a
-        // regression that mis-selected the multi-hop fallback for
+        // regression that wrongly selected the multi-hop fallback for
         // already-busy regions.
         let region = "us-east";
         let peer_id = PeerId::new();
@@ -712,7 +712,7 @@ mod tests {
         // registered key. The two keys are wire-form
         // `bibeam_protocol::multihop::WgPublicKey` values (32-byte
         // newtype around a base64-rendered public key) — never a
-        // private-key value. Catches a regression that mis-paired
+        // private-key value. Catches a regression that wrongly paired
         // the keys (sending the exit's key back to itself) or
         // accidentally surfaced a private key (the wire type would
         // not even compile against a private key, but a future

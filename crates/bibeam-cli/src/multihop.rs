@@ -121,7 +121,7 @@ pub(crate) enum ClientSessionError {
     RelayFrameTooShort,
     /// Inbound relay frame carried a `chain_id` that does not belong
     /// to the active assignment. Caller MUST drop the datagram —
-    /// accepting it would let a confused forwarder mis-deliver
+    /// accepting it would let a confused forwarder wrongly deliver
     /// another chain's traffic into this session.
     #[error("inbound chain_id does not match active assignment")]
     ChainIdMismatch,
@@ -634,7 +634,7 @@ mod tests {
         // Contract: in multi-hop mode, decode_inbound MUST reject a
         // RelayFrame whose chain_id does not match the active
         // assignment. A regression that silently accepted the
-        // mis-keyed frame would let a confused forwarder smuggle
+        // wrongly keyed frame would let a confused forwarder smuggle
         // another chain's traffic into this session.
         let (alice, bob) = Box::pin(complete_handshake()).await;
         let bob_addr = bob.peer_addr();

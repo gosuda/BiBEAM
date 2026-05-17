@@ -324,7 +324,7 @@ mod tests {
             assert!(
                 !name.ends_with("_total"),
                 "gauge name {name} MUST NOT carry the _total suffix \
-                 (Prometheus tooling would mis-classify it as a counter)",
+                 (Prometheus tooling would wrongly classify it as a counter)",
             );
         }
         // Cross-check: no name appears in both sections.

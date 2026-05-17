@@ -27,7 +27,7 @@
 //!   source-address ↔ destination-address pair must hit a leased row.
 //!   Observable at the IP layer; zero encapsulation overhead.
 //!   **Rejected.** Vulnerable if the upstream peer's NAT remaps the
-//!   source address mid-session — the lease would mis-bind, and the
+//!   source address mid-session — the lease would wrongly bind, and the
 //!   forwarder would either drop a legitimate flow or accept a
 //!   misrouted one.
 //!
@@ -163,7 +163,7 @@ pub struct WgPeerConfig {
     ///
     /// Rendered to the client carries the client's public key; rendered
     /// to the exit carries the exit's public key. The local endpoint
-    /// uses this field to detect a coordinator-side mis-addressing
+    /// uses this field to detect a coordinator-side addressing error
     /// (the local public key it sees here MUST match the public key
     /// it registered with).
     pub local_static_public: WgPublicKey,
