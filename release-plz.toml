@@ -1,0 +1,9 @@
+[workspace]
+changelog_update = true
+changelog_path = "CHANGELOG.md"
+git_release_enable = true
+git_release_draft = false
+git_release_latest = true
+publish = false                                                                      # flip to true when ready to publish to crates.io
+release_commits = "^(feat|fix|perf|refactor|docs|chore|ci|build|test)(\\(.+\\))?!?:"
+semver_check = true
