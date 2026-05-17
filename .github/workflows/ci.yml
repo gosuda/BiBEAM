@@ -101,7 +101,7 @@ jobs:
       # failure (`fail_ci_if_error: false` is kept on the upload only).
       - name: cargo llvm-cov nextest with line floor
         run: cargo llvm-cov nextest --workspace --all-features --lcov --output-path lcov.info --fail-under-lines 50
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           fail_ci_if_error: false
