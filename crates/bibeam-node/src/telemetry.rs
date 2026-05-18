@@ -22,9 +22,6 @@
 //!   exposition will surface them as `# TYPE … counter`).
 //! - Gauges do NOT carry the `_total` suffix.
 //!
-//! Three structural unit tests in the test-only `tests` sub-module
-//! lock the convention in.
-//!
 //! ## Registration
 //!
 //! [`register_node_metrics`] attaches `# HELP` and `# TYPE` metadata to
@@ -37,7 +34,7 @@
 //! Wiring into `bibeam-node`'s `main.rs` is intentionally **deferred**
 //! to a follow-up commit per the F-NODE.9 task scope; this commit
 //! ships only the name constants, the registration entry point, and
-//! the structural tests. Recording at the data-plane call sites is
+//! the no-recorder safety test. Recording at the data-plane call sites is
 //! also out of scope and lands with each data-plane module
 //! (F-NODE.4 / .7 / .8).
 //!
@@ -232,12 +229,13 @@ pub fn register_node_metrics() {
 }
 
 // -------------------------------------------------------------------
-// Tests — structural assertions on the naming convention.
+// Tests — no-recorder safety/idempotence for registration.
 //
-// These tests intentionally do NOT install a recorder or record any
-// samples; they only assert the workspace convention on the metric
-// name constants themselves. Recording-site coverage lives with each
-// data-plane module (F-NODE.4 / .7 / .8) and the integration suite.
+// This test intentionally does NOT install a recorder or record any
+// samples; it only asserts that metadata registration remains safe in
+// test binaries that use the global no-op recorder. Recording-site
+// coverage lives with each data-plane module (F-NODE.4 / .7 / .8) and
+// the integration suite.
 // -------------------------------------------------------------------
 
 #[cfg(test)]
