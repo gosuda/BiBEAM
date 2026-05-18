@@ -169,7 +169,7 @@ Client and exit each generate their own X25519 WG keypairs at registration time 
 
 - **Replay.** Current PASETO verification relies on signature + standard `iat` / `nbf` / `exp` checks. There is no separate `jti` replay cache in the current implementation; replay resistance today comes from short token lifetimes plus coordinator-side rotation.
 - **Downgrade.** There is no in-band version negotiation step in the `WireGuard` data plane that a MITM can use to push both sides to a weaker wire shape.
-- **Impersonation.** Exit static keys are coordinator-signed inside the match response. A client checks the signature before initiating the WireGuard handshake; a network attacker cannot substitute a static key without forging the coordinator's signature.
+- **Impersonation.** Exit static keys arrive through coordinator-controlled match/discovery responses over the trusted HTTPS/WS control plane. A network attacker cannot substitute a key without breaking that trust channel or causing the client to trust a different coordinator identity.
 
 ## What we do not promise
 

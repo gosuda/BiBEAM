@@ -2,7 +2,7 @@
 
 비빔 = mixing. Two planes: a thin control plane that brokers introductions, and a data plane that runs the mixed traffic. Everything else is a detail of one of those two.
 
-This file is the **current architecture reference**. The repository is no longer an empty crate scaffold: protocol/control-plane code, coordinator modules, and data-plane helpers now exist, but several paths are still partial or scaffolded. Where a section describes behaviour, treat it as the current intended contract unless a subsection explicitly calls out a future phase.
+This file is the **target architecture reference**. The repository now contains substantial protocol/control-plane code, but several request-flow and deployment sections below still describe the intended end state rather than a fully wired production daemon. Use [`docs/protocol.md`](./protocol.md) and the crate docs for the implemented wire/API surface; treat the rest here as architectural direction unless a subsection says otherwise.
 
 ## Two-plane overview
 

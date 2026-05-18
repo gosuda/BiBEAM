@@ -2,7 +2,7 @@
 
 Target host: **Oracle Cloud ARM Free Tier** (Ampere A1, 4 OCPUs, 24 GB RAM, Ubuntu 24.04 LTS). The crate set compiles for `aarch64-unknown-linux-gnu` from the start; no x86_64 assumption.
 
-This file is split in two. Section 1 describes what an operator can run **today** against the Phase 1 init scaffold. Section 2 describes the **target deployment** that the design points toward — none of the behaviours in section 2 are implemented yet, and operators must not rely on them.
+This file is split in two. Section 1 describes what an operator can run **today** against the current bootstrap binaries; Section 2 describes the **target deployment** that the design points toward — many of those behaviours remain incomplete, and operators must not rely on them yet.
 
 ---
 
@@ -15,7 +15,7 @@ The current state of the two daemons:
 | `bibeam-node` | Prints `bootstrap version=0.0.1` and waits for SIGINT, then exits cleanly with status 0. No network listener, no storage, no config file. |
 | `bibeam-cli` | Same as above. No connection to a coordinator. |
 
-There is **no** REST API, **no** `/metrics`, **no** `/healthz`, **no** `/readyz`, **no** `--config` flag, **no** redb storage, **no** cohort admission, **no** pkarr fallback. None of this is wired up.
+There is still **no externally reachable** REST API, `/metrics`, `/healthz`, or `/readyz` listener wired into the shipped binaries by default, and no fully wired cohort-admission / pkarr-fallback daemon path yet. Some flags and helper modules now exist, but the end-to-end operator workflow is still incomplete.
 
 ### Build
 
@@ -37,7 +37,7 @@ Binaries land in `target/release/`.
 Each binary is exercised by the same one-liner:
 
 ```bash
-./target/release/bibeam-node   # prints bootstrap version=0.0.1
+./target/release/bibeam-node   # logs bootstrap; optional flags may bind scaffolds, but full daemon boot is still incomplete
 # Ctrl-C to send SIGINT; process exits 0.
 ```
 
@@ -85,7 +85,7 @@ sudo install -m 0755 target/release/bibeam-node /usr/local/bin/
 
 ### 2.3 systemd units (target)
 
-Both units assume a `--config` flag and persistent state directories that do not exist today. They are presented here so the deployment shape is settled before the implementation lands.
+These units assume a `--config`-driven daemon boot sequence and persistent state directories that are not fully wired today. They remain forward-looking deployment shapes rather than ready-to-run service files.
 
 The single `bibeam-node` binary services both roles (per §11 R-1); the unit below covers the coord-enabled deployment (with `is_coordinator = true` in `node.toml`) and the data-plane-only deployment (with the flag unset). Operators running both roles on the same host should run two `bibeam-node@<instance>.service` instances with separate config files and state directories rather than a single unit.
 
