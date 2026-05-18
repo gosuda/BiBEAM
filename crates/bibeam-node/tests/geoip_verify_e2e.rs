@@ -4,10 +4,6 @@
     clippy::unwrap_used,
     reason = "integration test fixtures use unwrap/expect in setup paths"
 )]
-#![allow(
-    clippy::missing_panics_doc,
-    reason = "test functions never document panic behaviour"
-)]
 //! Integration tests for §11 verification gate #5 — the D-5 warn-only
 //! `GeoIP` cross-check primitive (R-REGION.2 / R-REGION.3).
 //!

@@ -396,11 +396,6 @@ fn wrap_in_relay_frame(chain_id: ChainId, wg_payload: Bytes) -> Bytes {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::expect_used,
-    reason = "test-only convenience for unwrapping known-good codec / cipher round-trips; \
-              the workspace clippy.toml allows `expect` and `unwrap` in tests"
-)]
 mod tests {
     use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 

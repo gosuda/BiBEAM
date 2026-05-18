@@ -15,7 +15,6 @@
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
-    clippy::missing_panics_doc,
     clippy::panic,
     reason = "Integration-test fixtures unwrap/expect/panic in setup paths."
 )]

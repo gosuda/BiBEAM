@@ -597,10 +597,8 @@ fn classify_direction(src: SocketAddr, entry: &RoutingEntry) -> Option<Direction
 
 #[cfg(test)]
 #[allow(
-    clippy::expect_used,
     clippy::indexing_slicing,
-    reason = "test-only convenience for unwrapping known-good fixtures and \
-              indexing into freshly-built test buffers."
+    reason = "test-only convenience for indexing into freshly-built test buffers."
 )]
 mod tests {
     use super::*;

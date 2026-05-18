@@ -528,10 +528,6 @@ impl RegionView for InMemoryRegionView {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::expect_used,
-    reason = "test-only convenience for unwrapping known-good fixture values"
-)]
 mod tests {
     use super::*;
 
