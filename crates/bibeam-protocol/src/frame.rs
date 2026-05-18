@@ -11,7 +11,7 @@
 //!
 //! - [`Frame::Control`] carries the discovery / coordinator control
 //!   messages added in F-PROTO.3,
-//! - [`Frame::Tunnel`] carries the Noise-sealed IP datagram added in
+//! - [`Frame::Tunnel`] carries the WG-sealed IP datagram added in
 //!   F-PROTO.4, and
 //! - [`Frame::Cohort`] carries the cohort lifecycle messages added in
 //!   F-PROTO.5.

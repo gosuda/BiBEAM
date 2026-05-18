@@ -97,7 +97,7 @@ proptest! {
     /// [`decode`] is total over `&[u8]`: for any byte sequence up to
     /// 64 KiB the function returns either `Ok(_)` or `Err(_)`, never
     /// panics. The 64-KiB bound is a generous superset of any real
-    /// wire frame (well above the QUIC MTU domain the protocol
+    /// wire frame (well above the WireGuard MTU domain the protocol
     /// targets) and keeps individual proptest iterations fast.
     #[test]
     fn proptest_decode_never_panics(buf in vec(any::<u8>(), 0..65_536)) {

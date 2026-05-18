@@ -22,7 +22,7 @@ pub enum Error {
     /// A cryptographic primitive or handshake failed.
     #[error("crypto error: {0}")]
     Crypto(String),
-    /// A transport-layer failure (QUIC, TCP, UDP, etc.).
+    /// A transport-layer failure (WireGuard/UDP, TCP).
     #[error("transport error: {0}")]
     Transport(String),
     /// A protocol-layer violation or unexpected message.

@@ -27,7 +27,6 @@
 //! This module deliberately has no concept of packet class. Per-class
 //! scheduling (DSCP-aware, flow-keyed) is a deferred enhancement that
 //! lands as its own task only after a classifier exists upstream.
-//! See `docs/plan/tasks.md` F-TUN.8 for rationale.
 
 use bytes::Bytes;
 use tokio::sync::mpsc;

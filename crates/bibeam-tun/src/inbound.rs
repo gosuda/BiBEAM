@@ -9,7 +9,7 @@
 //!
 //! The channel carries **already-decrypted IP bytes**. Whatever
 //! upstream stage handed bytes to us has already stripped the
-//! transport envelope (e.g. QUIC datagram) and the AEAD seal
+//! transport envelope (e.g. WireGuard-encapsulated UDP packet) and the AEAD seal
 //! (see `bibeam-crypto`). This crate stays cleanly L3; the inverse
 //! split is documented on the outbound side too.
 //!
