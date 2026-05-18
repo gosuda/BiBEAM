@@ -1,12 +1,14 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
+pub mod claims;
 pub mod error;
 pub mod identity;
 pub mod ids;
 pub mod redaction;
 pub mod time;
 
+pub use claims::SessionClaims;
 pub use error::Error;
 pub use identity::Fingerprint;
 pub use ids::{ChainId, CohortId, NodeId, PeerId};

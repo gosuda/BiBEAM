@@ -9,7 +9,7 @@ categories = { workspace = true }
 description = "Key and keying-material helpers: x25519 peer keys, control-plane chacha20-poly1305 aead, ed25519 identity with pkcs#8 pem, paseto v4 issuer + verifier, hkdf-sha256 key derivation, blake3-keyed invite-code psk derivation."
 
 [dependencies]
-bibeam-protocol = { workspace = true }
+bibeam-core = { workspace = true }
 x25519-dalek = { workspace = true }
 ed25519-dalek = { workspace = true, features = ["pkcs8", "pem"] }
 chacha20poly1305 = { workspace = true }
@@ -25,8 +25,6 @@ zeroize = { workspace = true }
 subtle = { workspace = true }
 thiserror = { workspace = true }
 
-[dev-dependencies]
-bibeam-core = { workspace = true }
 
 [lints]
 workspace = true

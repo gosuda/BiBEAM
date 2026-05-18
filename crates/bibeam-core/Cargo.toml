@@ -18,6 +18,9 @@ time = { workspace = true }
 ulid = { workspace = true }
 zeroize = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [lints]
 workspace = true
 

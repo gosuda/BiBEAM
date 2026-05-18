@@ -24,9 +24,8 @@
 //!    verify time, so a token minted with `SessionClaims.exp` in the
 //!    past must surface as [`TokenError::Paseto`].
 
-use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
+use bibeam_core::{CohortId, NodeId, PeerId, Timestamp, claims::SessionClaims};
 use bibeam_crypto::{PasetoIssuer, PasetoVerifier, TokenError};
-use bibeam_protocol::claims::SessionClaims;
 use pasetors::claims::Claims;
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::public;
