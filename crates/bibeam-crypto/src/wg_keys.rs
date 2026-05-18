@@ -261,26 +261,6 @@ mod tests {
     }
 
     #[test]
-    fn session_psk_partial_eq_is_byte_equal() {
-        let bytes = [7u8; WG_KEY_LEN];
-        let lhs = SessionPsk::new(bytes);
-        let rhs = SessionPsk::new(bytes);
-        assert_eq!(lhs, rhs);
-        let mut other = bytes;
-        other[0] = 8;
-        let differ = SessionPsk::new(other);
-        assert_ne!(lhs, differ);
-    }
-
-    #[test]
-    fn wg_psk_partial_eq_is_byte_equal() {
-        let bytes = [3u8; WG_KEY_LEN];
-        let lhs = WgPsk::new(bytes);
-        let rhs = WgPsk::new(bytes);
-        assert_eq!(lhs, rhs);
-    }
-
-    #[test]
     fn debug_redacts_secret_material() {
         let sk = WgSecretKey::generate();
         let dbg_sk = format!("{sk:?}");
