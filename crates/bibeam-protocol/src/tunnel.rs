@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! Data-plane tunnel datagram.
 //!
-//! Tunnel frames carry a single Noise-sealed IP packet between two
+//! Tunnel frames carry a single WG-sealed IP packet between two
 //! peers. The cryptographic sealing/unsealing lives in `bibeam-crypto`
 //! and `bibeam-transport`; this layer is wire-shape only — `payload` is
 //! treated as opaque bytes by the codec and by any router along the
@@ -21,6 +21,6 @@ use bibeam_core::PeerId;
 pub struct Tunnel {
     /// Identifier of the peer that sealed `payload`.
     pub peer_id: PeerId,
-    /// Noise-sealed IP frame; opaque to this layer.
+    /// WG-sealed IP frame; opaque to this layer.
     pub payload: Bytes,
 }

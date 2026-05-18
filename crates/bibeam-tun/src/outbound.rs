@@ -24,8 +24,7 @@
 //! transport frame is the responsibility of a downstream stage
 //! (`bibeam-crypto` for the AEAD, `bibeam-transport` for the
 //! datagram envelope). The split keeps `bibeam-tun` cleanly L3 and
-//! lets the crypto policy be decided independently — see D-4 in
-//! `docs/plan/tasks.md`.
+//! lets the crypto policy be decided independently — see D-4.
 
 use bytes::Bytes;
 use tokio::sync::mpsc;
