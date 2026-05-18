@@ -106,16 +106,6 @@ pub enum ExitModeError {
     Socks5(#[source] bibeam_transport::Socks5Error),
 }
 
-impl From<ExitModeError> for bibeam_core::Error {
-    fn from(err: ExitModeError) -> Self {
-        // Both variants of `ExitModeError` are I/O-class failures on the
-        // exit data path: a TUN write failure or a SOCKS5 listener
-        // failure. `bibeam_core::Error::Transport` is the closest class
-        // — the exit is one half of a transport session.
-        Self::Transport(err.to_string())
-    }
-}
-
 /// Module-private trait abstracting the "write one IP packet" operation.
 ///
 /// Exists so tests can substitute a recording mock (see
