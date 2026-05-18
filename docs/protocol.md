@@ -4,9 +4,9 @@ This file is the **as-designed** wire-format and handshake spec. Phase 1 ships c
 
 ## Encoding
 
-All control-plane and data-plane frames are encoded with [postcard](https://docs.rs/postcard) — a no-std-friendly, length-delimited, [serde](https://docs.rs/serde) binary format. Postcard is non-self-describing: receivers must know the schema. Schemas are Rust types in [`bibeam-protocol`](../crates/bibeam-protocol).
+Control-plane messages and coordinator-pushed WS events are encoded with [postcard](https://docs.rs/postcard) — a no-std-friendly, length-delimited, [serde](https://docs.rs/serde) binary format. Postcard is non-self-describing: receivers must know the schema. Schemas are Rust types in [`bibeam-protocol`](../crates/bibeam-protocol).
 
-Endianness: all multi-byte integers postcard emits are little-endian varints; framing is length-prefixed varint per top-level message.
+The `WireGuard` data plane is **not** postcard-framed: once a session is admitted, payload traffic rides opaque `WireGuard` packets over UDP. BiBeam's own typed protocol surface covers only the control plane, token claims, and forwarder/lease metadata.
 
 ## Transport
 
@@ -77,7 +77,7 @@ Errors carry a stable string code plus a human-readable message. Codes form a cl
 | `rate.limited` | 429 | Per-peer rate limit hit |
 | `internal` | 500 | Anything not explicitly mapped above |
 
-Data-plane equivalents (carried inside WireGuard-sealed protocol frames) reuse the same string codes inside a `ProtocolError { code, message }` frame.
+There is no separate data-plane `ProtocolError` frame in the `WireGuard` design. Data-plane failures surface through local handler errors, audit rows, transport metrics, or the coordinator-facing control-plane error codes above.
 
 ## Cohort admission lifecycle
 
@@ -101,8 +101,8 @@ The floor is configurable but defaults to 30. Lower floors are permitted for dev
 
 ## Versioning
 
-`proto_version` is a single integer carried in `ClientHello` and the PASETO `proto_version` claim. The handshake fails fast with `proto.version_unsupported` on mismatch.
+`proto_version` is carried in control-plane schemas and in the PASETO `proto_version` claim. Exit verification fails fast with `proto.version_unsupported` when a token or control-plane message advertises an unsupported version; there is no separate `ClientHello` handshake frame in the `WireGuard` data plane.
 
-The error-code enum is **closed**: every code that may be emitted on the wire at a given `proto_version` is listed in the table above for that version. Adding a new code requires a `proto_version` bump. A peer that receives an error code it does not recognize MUST treat it as `internal` for handling purposes and surface the raw string in logs for diagnostic use; this preserves a single, deterministic recovery path under skew while keeping the enum closed per version.
+The error-code enum is **closed**: every code that may be emitted by the control plane or token verifier at a given `proto_version` is listed in the table above for that version. Adding a new code requires a `proto_version` bump. A peer that receives an error code it does not recognize MUST treat it as `internal` for handling purposes and surface the raw string in logs for diagnostic use; this preserves a single, deterministic recovery path under skew while keeping the enum closed per version.
 
 Forward-compatible additions (new optional postcard fields with default-on-absence semantics) do not bump the version. Wire-format breaks, semantic changes to existing fields, and new error codes do.
