@@ -34,23 +34,15 @@
 //! "atomically swap its active cohort assignment WITHOUT dropping any
 //! in-flight packets".
 //!
-//! ## `CohortHandler` trait — provisional, pending F-NODE.5
+//! ## Cohort event integration
 //!
-//! F-NODE.5 (Cohort assignment receiver) is landing in parallel on a
-//! disjoint file set and will eventually own the canonical
-//! [`CohortHandler`] trait that dispatches `CohortAssigned` and
-//! `CohortRotated` events. F-NODE.6's task spec requires
-//! `impl CohortHandler for RotationHandler { fn on_rotated(...) }`,
-//! which cannot compile without the trait, so the trait is defined
-//! here as a forward declaration. When F-NODE.5 lands, whoever
-//! merges second consolidates: either F-NODE.5's PR moves the trait
-//! to its own module and this file `pub use`s it, or this module
-//! stays the canonical home and F-NODE.5 imports from here. The
-//! trait surface is intentionally narrow — a single
-//! [`CohortHandler::on_rotated`] entry point matching the F-NODE.6
-//! task spec, with the obvious `Send + Sync` bound so the
-//! coordinator event-loop task can dispatch into it from any
-//! tokio worker.
+//! The canonical event-dispatch trait lives in
+//! [`crate::cohort_ws::CohortHandler`]. This module intentionally owns
+//! only the rotation mechanics: [`RotationHandler::on_rotated`] is an
+//! inherent method that applies a `CohortRotated` payload by delegating
+//! to [`RotationHandler::swap_to`]. F-NODE.5 can wire the broader async
+//! trait surface (`CohortAssigned`, `CohortRotated`, `Disconnect`) onto
+//! this handler without keeping a duplicate sync trait in this module.
 //!
 //! ## Out of scope (deferred to follow-ups)
 //!
@@ -70,29 +62,6 @@ use arc_swap::ArcSwap;
 use bibeam_protocol::cohort::CohortLive;
 
 use crate::telemetry::NODE_COHORT_ROTATIONS_TOTAL;
-
-/// Provisional trait for the node-side handler of coordinator-pushed
-/// cohort events.
-///
-/// F-NODE.6 only exercises [`Self::on_rotated`]; the broader event
-/// surface (`CohortAssigned`, `Disconnect`) belongs to F-NODE.5, which
-/// is landing on a disjoint file set in parallel. Defining the trait
-/// here lets the rotation handler land independently; the eventual
-/// canonical home is F-NODE.5's module, at which point one of the
-/// two PRs `pub use`s the other's definition (see the module-level
-/// doc for the consolidation rule).
-///
-/// Implementors MUST be `Send + Sync` — the coordinator event-loop
-/// task dispatches into them from a `tokio` worker and the handler
-/// runs concurrently with active-cohort reads on every data-plane
-/// site. Implementations MUST be non-blocking at the read-side and
-/// MUST NOT block the dispatch caller, since the event loop is
-/// shared with other event variants.
-pub trait CohortHandler: Send + Sync {
-    /// Handle a `CohortRotated` event by adopting `new` as the
-    /// active cohort.
-    fn on_rotated(&self, new: CohortLive);
-}
 
 /// Node-side handler for [`bibeam_discovery::CoordinatorEvent::CohortRotated`].
 ///
@@ -197,6 +166,17 @@ impl RotationHandler {
         );
     }
 
+    /// Handle a `CohortRotated` event by adopting `new` as the active
+    /// cohort.
+    ///
+    /// This is intentionally an inherent method rather than a local
+    /// trait implementation. The canonical async event surface is
+    /// [`crate::cohort_ws::CohortHandler`]; the future integration can
+    /// call this method from its `on_rotated` implementation.
+    pub fn on_rotated(&self, new: CohortLive) {
+        self.swap_to(new);
+    }
+
     /// Return the total number of rotations this handler has
     /// processed since construction.
     ///
@@ -205,12 +185,6 @@ impl RotationHandler {
     /// authoritative source is the Prometheus metric.
     pub fn rotation_count(&self) -> u64 {
         self.rotations.load(Ordering::Relaxed)
-    }
-}
-
-impl CohortHandler for RotationHandler {
-    fn on_rotated(&self, new: CohortLive) {
-        self.swap_to(new);
     }
 }
 
@@ -224,7 +198,7 @@ mod tests {
     use bibeam_core::{CohortId, NodeId, PeerId, Timestamp};
     use bibeam_protocol::cohort::CohortLive;
 
-    use super::{CohortHandler, RotationHandler};
+    use super::RotationHandler;
 
     /// Build a [`CohortLive`] with a single member + single exit,
     /// freshly-generated identifiers, and the current wall clock.
@@ -311,11 +285,9 @@ mod tests {
         assert_eq!(handler.rotation_count(), 1);
     }
 
-    /// Contract: `on_rotated` (the `CohortHandler` trait method)
-    /// dispatches to `swap_to`.
+    /// Contract: `on_rotated` dispatches to `swap_to`.
     ///
-    /// Locks in the F-NODE.6 task-spec requirement
-    /// `impl CohortHandler for RotationHandler { fn on_rotated(...) }`.
+    /// Locks in the F-NODE.6 event-handler requirement.
     /// A regression that wired `on_rotated` to a no-op (or to a
     /// different cohort field) would let coordinator rotation events
     /// silently drop on the floor.
@@ -326,7 +298,7 @@ mod tests {
         let replacement_id = replacement.cohort;
         let handler = RotationHandler::new(initial);
 
-        <RotationHandler as CohortHandler>::on_rotated(&handler, replacement);
+        handler.on_rotated(replacement);
 
         let snapshot = handler.current_cohort();
         assert_eq!(snapshot.cohort, replacement_id);
