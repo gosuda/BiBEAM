@@ -8,9 +8,9 @@ Bibeam is an open source, collaborative, distributed, E2E, non-exhaustive Peer-T
 
 ## Status
 
-**Phase 1 init scaffold.** The workspace builds on the latest stable toolchain, the strict regime is wired (`#![forbid(unsafe_code)]`, strict clippy, conventional commits enforced by `cog verify`), and CI runs fmt + clippy + nextest matrix + doc + deny + machete + coverage on every PR.
+**Current implementation.** The workspace now contains real protocol/control-plane code: typed control messages, PASETO token issuance/verification, discovery HTTP + WebSocket clients, coordinator admission/rate-limiting, transport helpers, and targeted unit/integration coverage. The strict regime is still wired (`#![forbid(unsafe_code)]`, strict clippy, conventional commits via `cog verify`), and CI runs fmt + clippy + nextest + doc + deny + machete + coverage on every PR.
 
-**No tunnel functionality has been implemented yet.** Crate skeletons declare boundaries; modules are empty. The two daemon binaries (`bibeam-node`, `bibeam-cli`) currently print `bootstrap version=0.0.1` and exit on SIGINT. Protocol code lands in subsequent PRs.
+**Still incomplete.** End-to-end tunnel bring-up and full daemon boot orchestration are not production-ready yet. The binaries still log `bootstrap` at startup, and several runtime paths remain scaffolded or feature-gated while the implementation converges.
 
 ## Quickstart
 

@@ -1,12 +1,12 @@
 # Protocol
 
-This file is the **as-designed** wire-format and handshake spec. Phase 1 ships crate skeletons only; the implementation lands incrementally in later PRs. Where a section reads as if the system "does" something, that something is the target the implementation will conform to. Concrete numeric tags and field names are reserved here so impl PRs do not bikeshed them.
+This file is the **current protocol/reference shape** for the coordinator control plane, PASETO session tokens, and the `WireGuard`-based data plane. The implementation is no longer an empty scaffold, but several surfaces are still evolving; where a section reads as if the system \"does\" something, treat that as the current intended contract the code is converging on.
 
 ## Encoding
 
-Control-plane messages and coordinator-pushed WS events are encoded with [postcard](https://docs.rs/postcard) — a no-std-friendly, length-delimited, [serde](https://docs.rs/serde) binary format. Postcard is non-self-describing: receivers must know the schema. Schemas are Rust types in [`bibeam-protocol`](../crates/bibeam-protocol).
+Coordinator-facing control-plane traffic uses [JSON](https://www.json.org/) over HTTPS and WebSocket text frames. Lower-level protocol structs in [`bibeam-protocol`](../crates/bibeam-protocol) also derive [postcard](https://docs.rs/postcard) when modules need compact binary serialization (for example relay frames and lease metadata), but the public coordinator API is JSON, not postcard.
 
-The `WireGuard` data plane is **not** postcard-framed: once a session is admitted, payload traffic rides opaque `WireGuard` packets over UDP. BiBeam's own typed protocol surface covers only the control plane, token claims, and forwarder/lease metadata.
+The `WireGuard` data plane is **not** `postcard`-framed: once a session is admitted, payload traffic rides opaque `WireGuard` packets over UDP. BiBeam's own typed protocol surface covers only the control plane, token claims, and forwarder/lease metadata around that traffic.
 
 ## Transport
 
@@ -22,46 +22,42 @@ Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST o
 
 Coordinator-issued, PASETO v4 (public) tokens are the data-plane admission credential. Library: [`pasetors`](https://docs.rs/pasetors) 0.7 with the `v4` feature.
 
-Claims:
+The implementation stores the typed session payload under a single custom JSON claim, `\"bibeam_session\"`, whose value is [`SessionClaims`](../crates/bibeam-core/src/claims.rs):
 
-| Claim | Type | Purpose |
+| Field | Type | Purpose |
 |---|---|---|
-| `iss` | string | Coordinator identifier (e.g. `coord-a.bibeam.example`) |
-| `sub` | string | Client peer ID alias |
-| `aud` | string | Exit peer ID alias |
-| `iat` | RFC3339 timestamp | Issue time |
-| `exp` | RFC3339 timestamp | Expiry (≤ 15 minutes after `iat`) |
-| `jti` | UUID v7 | Replay-detection nonce |
-| `max_bytes` | integer | Byte budget for the session (default 500 × 2²⁰) |
-| `cohort_id` | string | Identifier of the admitted cohort (for rotation accounting) |
-| `proto_version` | integer | Protocol version the token is valid for |
+| `sub` | string | Subject peer ID |
+| `cohort` | string | Cohort identifier |
+| `exp` | RFC3339 timestamp | Session expiry instant |
+| `exit_set` | array of strings | Exit nodes the peer is authorised to route through |
+| `path` | array of strings | Ordered forwarder chain for this session (last entry is the exit) |
 
-Footer: a JSON object `{ "kid": "<coord-key-id>" }` so the verifier can pick the right verification key from the coordinator's published key set.
+At the PASETO layer itself, the issuer also sets standard `iat`, `nbf`, and `exp` claims. Footer: a JSON object `{ \"kid\": \"<coord-key-id>\" }` so the verifier can pick the right verification key from the coordinator's published key set.
 
-Verification path on the exit: parse v4.public, verify signature with coordinator's key set, check `aud` matches the exit's own peer alias, check `exp > now`, check `jti` is not in the seen-jti set.
+Verification path on the exit/client side: parse `v4.public`, verify the signature with the coordinator's key set, apply the default `iat` / `nbf` / `exp` validation rules, then deserialize the `bibeam_session` custom claim into `SessionClaims`.
 
-**Replay-protection set.** Seen `jti` values are retained until each token's own `exp` passes (TTL-keyed, not LRU-keyed). Eviction is driven by expiry only, never by capacity; an unexpired `jti` cannot be evicted under churn. The set size is bounded above by the product `admission_rate × max_token_ttl` (default ≤ 15 min × per-exit admission rate); operators that need a hard cap should rate-limit admission upstream rather than shorten the replay window.
+The current implementation does **not** add a separate `jti` replay cache or `aud` binding layer on top of those claims. Replay resistance today comes from short token lifetimes plus signature / expiry checks; any stronger per-token replay story would be an additional protocol change.
 
 ## Control-plane endpoints
 
-All endpoints are served under `/v0/` on the coordinator. Versioning is path-based; breaking changes bump to `/v1/`.
+All HTTP endpoints are served under `/api/v1/` on the coordinator. The event stream follows the same namespace at `/api/v1/events`.
 
 | Method | Path | Body / params | Returns |
 |---|---|---|---|
-| `POST` | `/v0/register` | `RegisterRequest { invite, identity_pubkey, capability }` | `RegisterResponse { peer_alias, receipt }` |
-| `POST` | `/v0/match` | `MatchRequest { peer_alias, signature }` | `MatchResponse { session_token, exit_endpoint, exit_static_key }` |
-| `POST` | `/v0/rotate` | `RotateRequest { current_token, signature }` | `MatchResponse` (new token) |
-| `GET` | `/v0/exits` | — | `ExitCatalog { exits: [ExitAdvert] }` (signed by coordinator) |
+| `POST` | `/api/v1/register` | `Register { peer_id, addr_hint, can_exit, capacity_hint, at }` | `RegisterAck { session_token, expires_at }` |
+| `POST` | `/api/v1/match` | `MatchRequest { peer_id, at }` | `MatchResponse` (`SingleHop` or `MultiHopAssignment`) |
+| `POST` | `/api/v1/heartbeat` | `Heartbeat { peer_id, at }` | `200 OK` |
+| `POST` | `/api/v1/disconnect` | `Disconnect { peer_id, reason, at }` | `200 OK` |
 | `GET` | `/metrics` | — | Prometheus exposition (served by [`bibeam-runtime`](../crates/bibeam-runtime)) |
 | `GET` | `/healthz` | — | `200 OK` if the process is alive |
 | `GET` | `/readyz` | — | `200 OK` if the process is ready to serve registrations |
-| `WS` | `/v0/subscribe` | server-pushed `CoordEvent`s (postcard-framed binary messages) | exit-catalog updates, cohort admission notifications |
+| `WS` | `/api/v1/events` | server-pushed `CoordinatorEvent` JSON text frames | `CohortAssigned`, `CohortRotated`, `Disconnect` |
 
-Request and response bodies on JSON endpoints are serde-derived; the WS stream uses postcard.
+HTTP request/response bodies are serde-derived JSON. The WS stream uses tagged JSON text frames, not binary postcard messages.
 
 ## Error codes
 
-Errors carry a stable string code plus a human-readable message. Codes form a closed enum on both sides.
+Errors carry a stable string code plus a human-readable message. The current implementation uses these as coordinator/control-plane response classifiers rather than as a separate data-plane frame family.
 
 | Code | HTTP | Meaning |
 |---|---|---|
@@ -70,14 +66,12 @@ Errors carry a stable string code plus a human-readable message. Codes form a cl
 | `invite.expired` | 403 | Invite past `expires_at` |
 | `admission.insufficient_cohort` | 503 | Anonymity-set floor not met; client should retry |
 | `match.no_exit_available` | 503 | No exit with available capacity |
-| `token.invalid` | 401 | PASETO signature or claims rejected |
-| `token.expired` | 401 | `exp` in the past |
-| `token.replay` | 409 | `jti` previously seen |
-| `proto.version_unsupported` | 426 | `proto_version` not accepted |
-| `rate.limited` | 429 | Per-peer rate limit hit |
+| `token.invalid` | 401 | PASETO signature or embedded claims rejected |
+| `token.expired` | 401 | Standard PASETO expiry validation failed |
+| `rate.limited` | 429 | Per-peer or per-IP rate limit hit |
 | `internal` | 500 | Anything not explicitly mapped above |
 
-There is no separate data-plane `ProtocolError` frame in the `WireGuard` design. Data-plane failures surface through local handler errors, audit rows, transport metrics, or the coordinator-facing control-plane error codes above.
+There is no separate data-plane `ProtocolError` frame in the `WireGuard` design. Data-plane failures surface through local handler errors, audit rows, transport metrics, or the coordinator-facing control-plane errors above.
 
 ## Cohort admission lifecycle
 
@@ -93,16 +87,14 @@ Backs the **anonymity-set floor of 30 users at admission** declared as decision 
         └───────────── re-admit ◄───────────┴──────────────────────────────┘
 ```
 
-- **pending.** A client has called `POST /v0/match`, the coordinator has chosen a candidate exit, but the candidate cohort on that exit has not yet reached the floor (default 30). The match request blocks (with a short server-side timeout returning `admission.insufficient_cohort` so the client can retry with backoff) until enough pending peers accumulate.
+- **pending.** A client has called `POST /api/v1/match`, the coordinator has chosen a candidate exit, but the candidate cohort on that exit has not yet reached the floor (default 30). The match request blocks (with a short server-side timeout returning `admission.insufficient_cohort` so the client can retry with backoff) until enough pending peers accumulate.
 - **live.** Cohort size reached the floor; coordinator mints PASETO tokens for every pending member of the cohort in a single batch and transitions them to live. From this point the cohort is bound to the exit until the rotation deadline (15 min / 500 MB cumulative).
-- **re-pool.** Rotation deadline fires (per-session, not per-cohort). The client calls `POST /v0/rotate`. The coordinator returns the client to pending with a fresh candidate exit; admission re-runs. The cohort on the old exit shrinks. Decay within a cohort (sessions ending naturally) is bounded by the rotation window and accepted as the MVP trade-off — there is no continuous re-gating between rotations.
+- **re-pool.** When the coordinator later pushes a `CoordinatorEvent::CohortRotated` frame on `/api/v1/events`, the client re-enters the same `/api/v1/match` flow for a fresh assignment. The cohort on the old exit shrinks. Decay within a cohort (sessions ending naturally) is bounded by the rotation window and accepted as the MVP trade-off — there is no continuous re-gating between rotations.
 
 The floor is configurable but defaults to 30. Lower floors are permitted for development networks; production deployments must run with ≥ 30 or refuse to mint tokens.
 
-## Versioning
+Coordinator path versioning is namespace-based: the current control-plane surface is `/api/v1/...` plus `/api/v1/events`. Breaking HTTP / WS changes bump that path prefix.
 
-`proto_version` is carried in control-plane schemas and in the PASETO `proto_version` claim. Exit verification fails fast with `proto.version_unsupported` when a token or control-plane message advertises an unsupported version; there is no separate `ClientHello` handshake frame in the `WireGuard` data plane.
+Lower-level binary envelopes in [`bibeam-protocol`](../crates/bibeam-protocol) still carry their own explicit schema/version bytes when serialized, but the `WireGuard` data plane has no extra BiBeam handshake frame or in-band version negotiation step.
 
-The error-code enum is **closed**: every code that may be emitted by the control plane or token verifier at a given `proto_version` is listed in the table above for that version. Adding a new code requires a `proto_version` bump. A peer that receives an error code it does not recognize MUST treat it as `internal` for handling purposes and surface the raw string in logs for diagnostic use; this preserves a single, deterministic recovery path under skew while keeping the enum closed per version.
-
-Forward-compatible additions (new optional postcard fields with default-on-absence semantics) do not bump the version. Wire-format breaks, semantic changes to existing fields, and new error codes do.
+Forward-compatible additions (new optional JSON / postcard fields with default-on-absence semantics) do not require a path bump. Wire-shape breaks, semantic changes to existing fields, and new externally-visible error codes do.

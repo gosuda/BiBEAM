@@ -167,8 +167,8 @@ Client and exit each generate their own X25519 WG keypairs at registration time 
 
 ## Replay, downgrade, impersonation
 
-- **Replay.** PASETO `jti` is a UUID v7 and is checked against a per-exit seen-set retained until each token's `exp` passes (TTL-keyed, no capacity-driven eviction). Tokens are bound to a single exit via `aud`; replay against a different exit fails the `aud` check.
-- **Downgrade.** `proto_version` in `ClientHello` and the PASETO claim must match. There is no negotiation step a MITM can use to push both sides to a weaker version.
+- **Replay.** Current PASETO verification relies on signature + standard `iat` / `nbf` / `exp` checks. There is no separate `jti` replay cache in the current implementation; replay resistance today comes from short token lifetimes plus coordinator-side rotation.
+- **Downgrade.** There is no in-band version negotiation step in the `WireGuard` data plane that a MITM can use to push both sides to a weaker wire shape.
 - **Impersonation.** Exit static keys are coordinator-signed inside the match response. A client checks the signature before initiating the WireGuard handshake; a network attacker cannot substitute a static key without forging the coordinator's signature.
 
 ## What we do not promise
