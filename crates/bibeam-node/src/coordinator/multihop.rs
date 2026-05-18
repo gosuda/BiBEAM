@@ -381,7 +381,7 @@ fn build_single_hop(exit: &ExitCandidate) -> SingleHopMatch {
         cohort: bibeam_core::CohortId::new(),
         exit_set: vec![exit.node_id],
         exit_regions: HashMap::new(),
-        rotation_deadline: rotation_deadline_now(),
+        rotation_deadline: lease_deadline_now(),
     }
 }
 
@@ -395,7 +395,7 @@ fn build_multi_hop(
     forwarders: &[ForwarderCandidate],
     exit: &ExitCandidate,
 ) -> MultiHopAssignment {
-    let lease_expires_at = lease_expires_at_now();
+    let lease_expires_at = lease_deadline_now();
     let forwarder_chain = build_lease_chain(client.addr, forwarders, exit.addr, lease_expires_at);
     MultiHopAssignment {
         exit: exit.node_id,
@@ -404,16 +404,9 @@ fn build_multi_hop(
     }
 }
 
-/// `Timestamp::now() + 15 min` — the rotation cadence §11 R-3
-/// requires every assembled cohort to honour. Extracted so the
-/// single-hop and multi-hop branches stamp the same horizon.
-fn rotation_deadline_now() -> Timestamp {
-    Timestamp::from_offset_date_time(Timestamp::now().into_inner() + LEASE_DURATION)
-}
-
-/// `Timestamp::now() + 15 min` — the lease expiry every
-/// [`ForwarderLease`] this module emits inherits.
-fn lease_expires_at_now() -> Timestamp {
+/// `Timestamp::now() + 15 min` — the lease deadline every assembled
+/// cohort and [`ForwarderLease`] this module emits inherits.
+fn lease_deadline_now() -> Timestamp {
     Timestamp::from_offset_date_time(Timestamp::now().into_inner() + LEASE_DURATION)
 }
 
