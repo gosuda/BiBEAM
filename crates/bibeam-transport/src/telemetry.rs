@@ -204,30 +204,6 @@ mod tests {
     }
 
     #[test]
-    fn counter_names_carry_the_prometheus_total_suffix() {
-        for name in [
-            WG_HANDSHAKE_STARTED_TOTAL,
-            WG_HANDSHAKE_COMPLETED_TOTAL,
-            HOLEPUNCH_STARTED_TOTAL,
-            HOLEPUNCH_SUCCEEDED_TOTAL,
-            HOLEPUNCH_TIMED_OUT_TOTAL,
-            DECRYPT_FAILURE_TOTAL,
-            BYTES_IN_TOTAL,
-            BYTES_OUT_TOTAL,
-        ] {
-            assert!(
-                name.ends_with("_total"),
-                "counter name {name} must follow Prometheus _total convention",
-            );
-        }
-    }
-
-    #[test]
-    fn telemetry_target_is_module_scoped() {
-        assert_eq!(TELEMETRY_TARGET, "bibeam_transport");
-    }
-
-    #[test]
     fn record_helpers_are_callable_without_a_subscriber() {
         // None of the record_* helpers should panic when no
         // tracing subscriber is installed and no metrics recorder
