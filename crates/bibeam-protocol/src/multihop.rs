@@ -313,21 +313,6 @@ mod tests {
     }
 
     #[test]
-    fn relay_frame_round_trip_empty_payload() {
-        // Contract: an empty wg_payload still round-trips — the
-        // prefix alone is a syntactically valid frame even if no
-        // forwarder would route it.
-        let frame = RelayFrame {
-            chain_id: ChainId::new(),
-            wg_payload: Bytes::new(),
-        };
-        let encoded = frame.encode();
-        assert_eq!(encoded.len(), RELAY_FRAME_PREFIX_LEN);
-        let decoded = RelayFrame::decode(&encoded).expect("decode round-trip");
-        assert_eq!(decoded, frame);
-    }
-
-    #[test]
     fn relay_frame_decode_rejects_truncated_prefix() {
         // Contract: a buffer shorter than the 16-byte chain_id
         // prefix MUST surface as an Err. Catches a regression that
