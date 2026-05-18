@@ -75,12 +75,6 @@ const BYTE_CAP_POLL_INTERVAL: Duration = Duration::from_secs(5);
 /// Why a rotation fired. The callback supplied to
 /// [`rotation_loop`] receives this so it can decide whether to
 /// log differently per cause, emit different metrics, etc.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RotationCause {
     /// The 15-minute interval elapsed.
@@ -109,10 +103,6 @@ pub(crate) enum RotationCause {
 /// Propagates any error from the callback verbatim (wrapped in a
 /// "rotation failed" context). Returns `Ok(())` only when
 /// `cancel` is triggered.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RotationCause for the rustc-vs-clippy rationale."
-)]
 #[allow(
     dead_code,
     reason = "wired into the up flow by F-CLI.6's data-plane bring-up. Reachable today \

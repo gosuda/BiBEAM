@@ -1,13 +1,5 @@
 #![forbid(unsafe_code)]
 #![allow(
-    clippy::redundant_pub_crate,
-    reason = "this module is binary-private (`mod multihop;` in main.rs has no `pub`); \
-              rustc's `unreachable_pub` warns on bare `pub` here, so every public-shaped \
-              item below uses `pub(crate)`. The clippy nursery lint disagrees with rustc \
-              on the same items — we side with rustc, the load-bearing one for the \
-              workspace's `-D warnings` gate."
-)]
-#![allow(
     dead_code,
     reason = "R-MULTIHOP-CLI lands the client-side multi-hop encode / decode primitive; \
               the bootstrap layer (`bibeam_discovery::bootstrap`) still rejects multi-hop \

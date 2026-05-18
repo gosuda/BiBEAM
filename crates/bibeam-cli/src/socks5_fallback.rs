@@ -44,12 +44,6 @@ const DEFAULT_BIND: &str = "127.0.0.1:1080";
 ///
 /// Returns an [`anyhow::Error`] when `override_str` is set and
 /// the value fails to parse as a [`SocketAddr`].
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 pub(crate) fn resolve_bind(override_str: Option<&str>) -> Result<SocketAddr> {
     let raw = override_str.unwrap_or(DEFAULT_BIND);
     raw.parse::<SocketAddr>().with_context(|| {
@@ -68,10 +62,6 @@ pub(crate) fn resolve_bind(override_str: Option<&str>) -> Result<SocketAddr> {
 ///
 /// Forwards any error from
 /// [`bibeam_transport::run_socks5_listener`] verbatim.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see resolve_bind for the rustc-vs-clippy rationale."
-)]
 pub(crate) async fn run_fallback(bind: SocketAddr, cancel: CancellationToken) -> Result<()> {
     warn_if_non_loopback(bind);
     tracing::info!(

@@ -67,13 +67,6 @@ const DEFAULT_TUN_NAME: &str = "bibeam0";
 /// sibling `cli` module materialises one and threads it through
 /// `setup_tun`. The fields stay `pub(crate)` so the caller can
 /// build a config inline.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules. The clippy nursery lint \
-              disagrees with rustc on the same items; we side with rustc, the \
-              load-bearing lint for the workspace's `-D warnings` gate."
-)]
 #[derive(Debug, Clone)]
 pub(crate) struct TunSetupConfig {
     /// Interface name hint passed to [`TunDevice::new`].
@@ -96,10 +89,6 @@ impl Default for TunSetupConfig {
 /// `pub(crate)` so the sibling `cli` module's `up` handler can
 /// pattern-match the `NoPrivilege` variant for F-CLI.8's
 /// SOCKS5-fallback handoff.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see `TunSetupConfig` for the rustc-vs-clippy rationale."
-)]
 #[derive(Debug, Error)]
 pub(crate) enum TunSetupError {
     /// The running process lacks the privilege the platform's TUN
@@ -166,10 +155,6 @@ const WINDOWS_NO_PRIV_HELP: &str = "the wintun driver requires an administrator 
 ///   capability check itself failed, which is rare enough that
 ///   we surface it as a distinct variant rather than treat it
 ///   as "no privilege".
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see `TunSetupConfig` for the rustc-vs-clippy rationale."
-)]
 pub(crate) async fn setup_tun(config: &TunSetupConfig) -> Result<TunDevice, TunSetupError> {
     #[cfg(target_os = "linux")]
     {

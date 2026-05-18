@@ -58,12 +58,6 @@ use rand::seq::IteratorRandom as _;
 /// region" case reads as a distinct variant at every call site
 /// (Cleanup A — wire-format forward-compat strip).
 #[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
-#[allow(
     dead_code,
     reason = "variants are constructed today only by the module's own integration tests; \
               F-CLI.5's rotation loop will wire `ExitFilter::Any` (default) and \
@@ -98,12 +92,6 @@ pub(crate) enum ExitFilter<'a> {
 ///
 /// The RNG is `&mut impl rand::Rng` so callers can wire in a
 /// seeded RNG for tests; production callers use `rand::rng()`.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 #[allow(
     dead_code,
     reason = "wired into the up flow by F-CLI.5's rotation loop, which calls pick_exit \
