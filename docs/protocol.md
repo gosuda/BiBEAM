@@ -22,7 +22,7 @@ Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST o
 
 Coordinator-issued, PASETO v4 (public) tokens are the data-plane admission credential. Library: [`pasetors`](https://docs.rs/pasetors) 0.7 with the `v4` feature.
 
-The implementation stores the typed session payload under a single custom JSON claim, `\"bibeam_session\"`, whose value is [`SessionClaims`](../crates/bibeam-core/src/claims.rs):
+The implementation stores the typed session payload under a single custom JSON claim, `"bibeam_session"`, whose value is [`SessionClaims`](../crates/bibeam-core/src/claims.rs):
 
 | Field | Type | Purpose |
 |---|---|---|

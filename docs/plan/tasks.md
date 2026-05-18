@@ -148,7 +148,7 @@ Each per-crate task is the **first non-stub merge** for that crate. Sub-items ar
 - **F-PROTO.3** Control-plane messages — `Register`, `RegisterAck`, `MatchRequest`, `MatchResponse`, `Heartbeat`, `Disconnect`; all `#[derive(Serialize, Deserialize)]`.
  - **F-PROTO.4** Data-plane datagram frame — `Tunnel { peer_id: PeerId, payload: bytes::Bytes }` — for WG-sealed-IP payloads carried in WireGuard datagrams.
 - **F-PROTO.5** Cohort lifecycle messages — `CohortAdmit`, `CohortLive`, `CohortRotate` per plan §2 decision #8 and `docs/protocol.md`.
-- **F-PROTO.6** PASETO claim struct — `SessionClaims { sub: PeerId, cohort: CohortId, exp: Timestamp, exit_set: Vec<NodeId> }`; matches `bibeam-crypto`'s PASETO issuer.
+- **F-PROTO.6** PASETO claim struct — `SessionClaims { sub: PeerId, cohort: CohortId, exp: Timestamp, exit_set: Vec<NodeId>, path: Vec<NodeId> }`; canonical home is `bibeam-core::claims`, re-exported from `bibeam-protocol::claims` for compatibility.
 - **F-PROTO.7** Error codes enum — `ProtocolError` with `From` impls for `postcard::Error` and `bibeam_core::Error`.
 - **Gate.** `cargo clippy -p bibeam-protocol …` clean + property tests under `cargo nextest run -p bibeam-protocol` pass.
 
@@ -224,7 +224,7 @@ Per D-4, the data plane is **WireGuard (UDP)** via `boringtun`, not Quinn QUIC +
 
  ### F-COORD — `bibeam-node` coordinator submodule (depends on all libs; via `bibeam-node`)
 
-- **F-COORD.1** axum HTTP server — `/v1/register`, `/v1/match`, `/v1/heartbeat`, `/v1/disconnect` plus WS upgrade endpoint.
+- **F-COORD.1** axum HTTP server — `/api/v1/register`, `/api/v1/match`, `/api/v1/heartbeat`, `/api/v1/disconnect` plus WS `/api/v1/events`.
 - **F-COORD.2** redb-backed peer registry — peers keyed by `PeerId`, value = `PeerRecord` (last-seen, exit-capability flag, capacity).
 - **F-COORD.3** redb-backed cohort assignments — cohorts keyed by `CohortId`, value = `{ members: Vec<PeerId>, exit_set: Vec<NodeId>, rotation_deadline: Timestamp }`.
 - **F-COORD.4** PASETO token issuance — at successful admission, issue session token with `SessionClaims` (F-PROTO.6).
