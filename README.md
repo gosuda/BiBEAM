@@ -33,8 +33,8 @@ Seven libraries + two role-specific daemons + one ops runner. See [docs/architec
 |---|---|
 | [`bibeam-core`](./crates/bibeam-core) | Shared types, errors, identity primitives |
 | [`bibeam-protocol`](./crates/bibeam-protocol) | Wire frames + postcard codec |
-| [`bibeam-crypto`](./crates/bibeam-crypto) | Noise IK, AEAD, PASETO, key management |
-| [`bibeam-transport`](./crates/bibeam-transport) | QUIC + Noise datagram tunnel + STUN hole-punch |
+| [`bibeam-crypto`](./crates/bibeam-crypto) | WG key generation, AEAD, PASETO session tokens |
+| [`bibeam-transport`](./crates/bibeam-transport) | WireGuard (boringtun) data plane over UDP + STUN hole-punch |
 | [`bibeam-tun`](./crates/bibeam-tun) | Cross-platform TUN device + L3 packet pipeline |
 | [`bibeam-discovery`](./crates/bibeam-discovery) | Coordinator client + rendezvous types |
 | [`bibeam-runtime`](./crates/bibeam-runtime) | Tracing, metrics, config, signals, health |
@@ -47,7 +47,7 @@ Per-crate `README.md` files are **generated** by `cargo run -p xtask -- gen-read
 ## Reading order
 
 1. [`docs/architecture.md`](./docs/architecture.md) — two-plane diagram, crate boundaries, request flow.
-2. [`docs/protocol.md`](./docs/protocol.md) — wire format, handshake, token claims, cohort lifecycle.
+2. [`docs/protocol.md`](./docs/protocol.md) — WG wire format, session tokens, control-plane API, cohort lifecycle.
 3. [`docs/threat-model.md`](./docs/threat-model.md) — adversaries, scope, mitigations.
 4. [`docs/operator-runbook.md`](./docs/operator-runbook.md) — bringing up a coordinator or node.
 5. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — strict regime, dep-selection rubric, commit conventions.

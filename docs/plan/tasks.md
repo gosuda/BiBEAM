@@ -146,7 +146,7 @@ Each per-crate task is the **first non-stub merge** for that crate. Sub-items ar
 - **F-PROTO.1** `Frame` enum + magic bytes — 4-byte magic, 1-byte version, postcard-serialized body.
 - **F-PROTO.2** postcard codec — `Frame::encode(&self) -> bytes::Bytes`, `Frame::decode(&[u8]) -> Result<Self>`; round-trip property test using `proptest`.
 - **F-PROTO.3** Control-plane messages — `Register`, `RegisterAck`, `MatchRequest`, `MatchResponse`, `Heartbeat`, `Disconnect`; all `#[derive(Serialize, Deserialize)]`.
-- **F-PROTO.4** Data-plane datagram frame — `Tunnel { peer_id: PeerId, payload: bytes::Bytes }` — for Noise-sealed-IP payloads carried in QUIC datagrams.
+ - **F-PROTO.4** Data-plane datagram frame — `Tunnel { peer_id: PeerId, payload: bytes::Bytes }` — for WG-sealed-IP payloads carried in WireGuard datagrams.
 - **F-PROTO.5** Cohort lifecycle messages — `CohortAdmit`, `CohortLive`, `CohortRotate` per plan §2 decision #8 and `docs/protocol.md`.
 - **F-PROTO.6** PASETO claim struct — `SessionClaims { sub: PeerId, cohort: CohortId, exp: Timestamp, exit_set: Vec<NodeId> }`; matches `bibeam-crypto`'s PASETO issuer.
 - **F-PROTO.7** Error codes enum — `ProtocolError` with `From` impls for `postcard::Error` and `bibeam_core::Error`.
@@ -222,7 +222,7 @@ Per D-4, the data plane is **WireGuard (UDP)** via `boringtun`, not Quinn QUIC +
 - **F-DISC.7** Session bootstrap protocol — happy path: `redeem invite → register → receive session token (PASETO) → receive cohort assignment`.
 - **Gate.** `cargo clippy -p bibeam-discovery …` clean + an in-process mock coordinator drives the full bootstrap to a PASETO-issued session.
 
-### F-COORD — `bibeam-coordinator` (depends on all libs; bin)
+ ### F-COORD — `bibeam-node` coordinator submodule (depends on all libs; via `bibeam-node`)
 
 - **F-COORD.1** axum HTTP server — `/v1/register`, `/v1/match`, `/v1/heartbeat`, `/v1/disconnect` plus WS upgrade endpoint.
 - **F-COORD.2** redb-backed peer registry — peers keyed by `PeerId`, value = `PeerRecord` (last-seen, exit-capability flag, capacity).
@@ -236,13 +236,13 @@ Per D-4, the data plane is **WireGuard (UDP)** via `boringtun`, not Quinn QUIC +
 - **F-COORD.10** BLAKE3-keyed PII hash before logging — wraps every `tracing::info!(peer_id = …)` via the `bibeam-runtime` redaction layer.
 - **F-COORD.11** Health / readiness — `/healthz` always-200, `/readyz` reflects redb open + axum bound state.
 - **F-COORD.12** Multi-coordinator failover wiring — independent coordinators per plan §2 decision #7; no inter-coord state (until P2A-1's replication-protocol PR lands).
-- **Gate.** `cargo clippy -p bibeam-coordinator …` clean + an end-to-end test on a single coordinator process: register two peers, satisfy admission floor with a 30-member fixture, issue a token, verify token against `bibeam-crypto` verifier.
+ - **Gate.** `cargo clippy -p bibeam-node --lib --bin bibeam-node …` clean + an end-to-end test on a single coordinator process: register two peers, satisfy admission floor with a 30-member fixture, issue a token, verify token against `bibeam-crypto` verifier.
 
 ### F-NODE — `bibeam-node` (depends on all libs; bin)
 
 - **F-NODE.1** Coordinator registration flow — at startup, register self with all configured coordinators in parallel; succeed on first quorum.
 - **F-NODE.2** Quinn server accept loop — inbound tunnel acceptance from peers in the same cohort.
-- **F-NODE.3** Relay traffic between peers — when matched as relay, forward Noise-sealed datagrams between two cohort members.
+ - **F-NODE.3** Relay traffic between peers — when matched as relay, forward WG-sealed datagrams between two cohort members.
 - **F-NODE.4** Exit traffic to internet — two paths corresponding to the CLI's TUN-or-SOCKS5 choice (F-CLI.2 / F-CLI.8). **L3 path (TUN-side ingress):** decrypt inbound `Tunnel` datagrams, hand raw IP packets to an OS-level NAT/routing layer — Linux `nftables` / `iptables` `MASQUERADE`, macOS `pf` NAT, or Windows ICS — operator-documented in `docs/operator-runbook.md`. Userspace TCP/UDP termination via `smoltcp` is a deferred enhancement — see D-3. **L4 path (SOCKS5-side ingress):** decrypt inbound `Tunnel` datagrams as L4 stream payloads, terminate SOCKS5 server semantics locally (via `fast-socks5`), forward to the destination via the OS socket layer (no NAT mutation required). SNI-obfuscation behavior follows D-1, not assumed here.
 - **F-NODE.5** Cohort assignment receiver — WS message from coordinator; updates local `CohortState`.
 - **F-NODE.6** Rotation event handler — on `CohortRotate`, drain current exit, accept the new cohort, atomically swap.
@@ -260,7 +260,7 @@ Per D-4, the data plane is **WireGuard (UDP)** via `boringtun`, not Quinn QUIC +
 - **F-CLI.5** Per-session rotation — 15-min wall-clock OR 500-MB cumulative bytes, whichever fires first; rotation drains current exit and prompts coordinator for re-pool.
 - **F-CLI.6** Config persistence — `figment` TOML at `~/.config/bibeam/config.toml` (Linux/macOS) or `%APPDATA%\bibeam\config.toml` (Windows).
 - **F-CLI.7** ECH policy exposure — surface whichever policy D-1 selects as a config-visible flag (e.g. `ech = "best-effort" | "deferred" | "skipped"`) and a `status` line for operator visibility; the actual ECH hop (DNS HTTPS record lookup, rustls ECH-extension wiring) lives in F-TRANS.2 (and is consumed at the exit via F-NODE.4 when D-1 places the hop server-side). The CLI consumes the policy; it does **not** load DNS HTTPS records itself.
-- **F-CLI.8** SOCKS5 fallback — when TUN setup fails (no capabilities, restricted environment), expose `127.0.0.1:1080` SOCKS5 over QUIC datagram tunnel.
+ - **F-CLI.8** SOCKS5 fallback — when TUN setup fails (no capabilities, restricted environment), expose `127.0.0.1:1080` SOCKS5 over WireGuard tunnel.
 - **Gate.** `cargo clippy -p bibeam-cli …` clean + `cargo run --bin bibeam -- --help` and `cargo run --bin bibeam -- version` exit 0 with non-empty stdout.
 
 ---
