@@ -211,15 +211,6 @@ impl ClientSession {
     /// `chain_id` is the [`ChainId`] of the first forwarder's lease
     /// (`forwarder_chain[0].chain_id`).
     #[must_use]
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "the multi-hop constructor surfaces the same five inputs `WgTunnel::new` \
-                  consumes (two keys, optional PSK, peer endpoint, socket) plus the \
-                  multi-hop-specific `chain_id` — total six, one over the workspace \
-                  threshold. Folding two of them into a builder struct would hide the \
-                  cipher-edge dependencies for no real ergonomic win at the one call \
-                  site this has."
-    )]
     pub(crate) fn new_multi_hop(
         local_secret: &WgSecretKey,
         exit_public: &WgPublicKey,

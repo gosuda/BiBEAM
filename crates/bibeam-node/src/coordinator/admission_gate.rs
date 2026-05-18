@@ -209,16 +209,6 @@ impl AdmissionGate {
     /// `exit_region_lookup` resolves each cohort exit's [`NodeId`]
     /// to its operator-tagged region string for the emitted
     /// [`MatchResponse`]; see [`ExitRegionLookup`] for the contract.
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "R-REGION.3 widened the gate's admit entry point with the \
-                  exit_region_lookup callback; the other five arguments are \
-                  the pre-existing F-COORD.5 contract surface (peer_id, \
-                  cohort_id, region, &mut cohort, &self). Bundling them \
-                  into a struct only shifts the same six fields onto a \
-                  literal at every call site and obscures the trailing \
-                  lookup pointer the rotation scheduler threads in by Arc."
-    )]
     pub fn admit_or_bucket(
         &self,
         peer_id: PeerId,
@@ -318,16 +308,6 @@ impl AdmissionGate {
     /// floor releases every other peer it brought along for the
     /// same `(region, cohort_id)` pair. Waiters bucketed under a
     /// different `cohort_id` or a different region are untouched.
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "R-REGION.3 widened the drain entry point with the \
-                  exit_region_lookup callback; the other five arguments are \
-                  the pre-existing F-COORD.5 + F-COORD.8 contract surface \
-                  (region, cohort_id, &cohort, audit_log, &self). Bundling \
-                  them into a struct only shifts the same six fields onto \
-                  a literal at every call site and obscures the trailing \
-                  lookup pointer the rotation scheduler threads in by Arc."
-    )]
     pub fn drain_ready(
         &self,
         region: &str,
@@ -950,14 +930,6 @@ mod tests {
     /// bucket, the `floor`th onward admit. Returns only the
     /// bucketed receivers (the admitted ones already got their
     /// `MatchResponse` via the admit return).
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Test helper: the floor-crossing drive needs every \
-                  parameter the production `admit_or_bucket` needs \
-                  plus the count of admissions and the floor itself. \
-                  Test-side helpers are exempt from the strict five- \
-                  argument bound the production-path helpers honour."
-    )]
     fn admit_to_floor_crossing(
         gate: &AdmissionGate,
         region: &str,

@@ -164,14 +164,6 @@ impl WgTunnel {
     /// non-overlapping. The prefix is opaque to the wire and only
     /// affects internal routing.
     #[must_use]
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "boringtun's Tunn::new takes 6 inputs (two keys, optional PSK, \
-                  keepalive, session prefix, rate limiter); this fn plus the \
-                  socket + peer-addr already exceeds the 5-arg threshold. \
-                  Wrapping in a builder struct hides the dependencies and adds \
-                  no real ergonomic win at the one call-site this has."
-    )]
     pub fn with_session_prefix(
         local_secret: &WgSecretKey,
         peer_public: &WgPublicKey,

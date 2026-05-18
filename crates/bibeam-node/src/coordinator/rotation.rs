@@ -131,17 +131,6 @@ impl RotationScheduler {
                   const adds an API promise we cannot honour at call \
                   sites that already hold runtime-allocated Arcs."
     )]
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "Test entry point: the cadence variant takes the \
-                  same 4-Arc dependency bundle the const-cadence \
-                  variant takes plus two Duration knobs the test \
-                  drives manually. Bundling these into a Config \
-                  struct only shifts the argument count off the \
-                  function signature and onto the struct literal at \
-                  every call site, and the constructor is exercised \
-                  by tests only — the production path uses `new`."
-    )]
     pub fn with_cadence(
         registry: Arc<PeerRegistry>,
         cohorts: Arc<CohortStore>,
