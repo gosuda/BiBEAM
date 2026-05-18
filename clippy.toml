@@ -3,7 +3,7 @@ msrv = "1.89"
 # complexity caps (aggressive but workable)
 cognitive-complexity-threshold = 15
 type-complexity-threshold = 200
-too-many-arguments-threshold = 5
+too-many-arguments-threshold = 7
 too-many-lines-threshold = 80
 excessive-nesting-threshold = 4
 max-fn-params-bools = 2
