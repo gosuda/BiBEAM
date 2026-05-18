@@ -157,7 +157,7 @@ pub trait LeaderLease: Send + Sync {
 /// deployments. Production multi-coordinator deployments replace
 /// it with a real backend in a follow-up PR per
 /// `docs/architecture.md`.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct SoleLeaderLease;
 
 impl LeaderLease for SoleLeaderLease {

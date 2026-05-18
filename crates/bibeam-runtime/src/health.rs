@@ -44,6 +44,11 @@ pub struct ReadyLatch {
 impl ReadyLatch {
     /// Construct a [`ReadyLatch`] in the *not-ready* state.
     #[must_use]
+    #[allow(
+        clippy::new_without_default,
+        reason = "ReadyLatch is constructed explicitly at daemon bring-up; \
+                  implicit Default construction is unused ceremony."
+    )]
     pub fn new() -> Self {
         Self {
             ready: Arc::new(AtomicBool::new(false)),
@@ -64,12 +69,6 @@ impl ReadyLatch {
     #[must_use]
     pub fn is_ready(&self) -> bool {
         self.ready.load(Ordering::Acquire)
-    }
-}
-
-impl Default for ReadyLatch {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
