@@ -163,6 +163,7 @@ must_use_candidate = "allow"
 similar_names = "allow"
 too_many_lines = "allow"          # complexity caught by cognitive_complexity instead
 multiple_crate_versions = "allow" # transitive duplicates from rust-crypto + dalek ecosystems; not load-bearing for safety
+redundant_pub_crate = "allow"     # rustc `unreachable_pub` already enforces the intent (pub-in-private); clippy's variant is pure noise on top of it
 
 # cognitive complexity gate (threshold lives in clippy.toml)
 cognitive_complexity = "warn"
