@@ -179,16 +179,6 @@ impl AllowlistCidrs {
 /// run the coord without a configured `mmdb_path`; that branch
 /// returns `Outcome::Skipped` immediately, no DB touch and no audit
 /// row.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "The cross-check contract takes six borrows by design \
-              (lookup, declared_region, observed_ip, allowlist, peer_id, \
-              audit_log). Bundling into a public parameter struct only \
-              shifts the same six fields onto a literal at every call \
-              site and inflates the public surface area for one private \
-              lint workaround. The internal dispatcher takes the same six \
-              borrows."
-)]
 pub fn cross_check_on_register(
     lookup: Option<&dyn CountryLookup>,
     declared_region: &str,
@@ -223,12 +213,6 @@ pub fn cross_check_on_register(
 /// Mismatch handling is identical to registration — one audit row
 /// per heartbeat tick that observes a divergence. The audit cadence
 /// matches the §11 R-3 R-FLOOR precedent (one row per gate poll).
-#[allow(
-    clippy::too_many_arguments,
-    reason = "Same six-borrow contract as cross_check_on_register; the \
-              heartbeat variant exists to switch the tracing level and \
-              expose verified_at, not to change the input shape."
-)]
 #[must_use]
 pub fn cross_check_on_heartbeat(
     lookup: Option<&dyn CountryLookup>,
