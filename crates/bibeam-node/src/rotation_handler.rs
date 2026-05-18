@@ -37,12 +37,13 @@
 //! ## Cohort event integration
 //!
 //! The canonical event-dispatch trait lives in
-//! [`crate::cohort_ws::CohortHandler`]. This module intentionally owns
-//! only the rotation mechanics: [`RotationHandler::on_rotated`] is an
-//! inherent method that applies a `CohortRotated` payload by delegating
-//! to [`RotationHandler::swap_to`]. F-NODE.5 can wire the broader async
-//! trait surface (`CohortAssigned`, `CohortRotated`, `Disconnect`) onto
-//! this handler without keeping a duplicate sync trait in this module.
+//! [`crate::cohort_ws::CohortHandler`] and receives a `CohortRotate`
+//! envelope (`old`, `new`, `at`). This module intentionally owns only
+//! the rotation mechanics: [`RotationHandler::on_rotated`] accepts an
+//! already-resolved [`CohortLive`] snapshot and delegates to
+//! [`RotationHandler::swap_to`]. F-NODE.5 can translate the async event
+//! payload into a full cohort snapshot before handing it to this helper,
+//! without keeping a duplicate sync trait in this module.
 //!
 //! ## Out of scope (deferred to follow-ups)
 //!
@@ -166,13 +167,16 @@ impl RotationHandler {
         );
     }
 
-    /// Handle a `CohortRotated` event by adopting `new` as the active
-    /// cohort.
+    /// Handle a resolved rotated cohort snapshot by adopting `new` as
+    /// the active cohort.
     ///
-    /// This is intentionally an inherent method rather than a local
+    /// This is intentionally an inherent helper rather than a local
     /// trait implementation. The canonical async event surface is
-    /// [`crate::cohort_ws::CohortHandler`]; the future integration can
-    /// call this method from its `on_rotated` implementation.
+    /// [`crate::cohort_ws::CohortHandler`], whose `on_rotated` method
+    /// receives only a `CohortRotate` envelope; that integration must
+    /// resolve the replacement [`CohortLive`] before calling this helper.
+    /// Kept public for embedders that already resolve coordinator
+    /// rotations into full cohort snapshots.
     pub fn on_rotated(&self, new: CohortLive) {
         self.swap_to(new);
     }
@@ -285,12 +289,12 @@ mod tests {
         assert_eq!(handler.rotation_count(), 1);
     }
 
-    /// Contract: `on_rotated` dispatches to `swap_to`.
+    /// Contract: `on_rotated` delegates a resolved [`CohortLive`] to
+    /// `swap_to`.
     ///
-    /// Locks in the F-NODE.6 event-handler requirement.
-    /// A regression that wired `on_rotated` to a no-op (or to a
-    /// different cohort field) would let coordinator rotation events
-    /// silently drop on the floor.
+    /// This test only covers the inherent helper alias. Event routing
+    /// and `CohortRotate`-to-`CohortLive` resolution belong to the
+    /// `cohort_ws` integration path.
     #[test]
     fn on_rotated_dispatches_to_swap() {
         let initial = sample_cohort();
