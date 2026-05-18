@@ -1,12 +1,4 @@
 #![forbid(unsafe_code)]
-#![allow(
-    clippy::redundant_pub_crate,
-    reason = "this module is binary-private (`mod cli;` in main.rs has no `pub`); rustc's \
-              `unreachable_pub` warns on bare `pub` here, so every public-shaped item \
-              below uses `pub(crate)`. The clippy nursery lint disagrees with rustc on \
-              the same items — we side with rustc, the load-bearing one for the \
-              workspace's `-D warnings` gate."
-)]
 //! Clap subcommand surface for the `bibeam` CLI (F-CLI.1).
 //!
 //! The [`Cli`] / [`Cmd`] pair below is the entry-point shape every

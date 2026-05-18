@@ -73,12 +73,6 @@ const STATE_SUBDIR: &str = "state";
 const SESSION_BLOB_FILENAME: &str = "session.bin";
 
 /// Errors emitted by the register / persist helpers in this module.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 #[derive(Debug, Error)]
 pub(crate) enum RegisterError {
     /// The invite string did not decode as base64-URL-safe-no-pad.
@@ -126,10 +120,6 @@ pub(crate) enum RegisterError {
 ///
 /// Returns [`RegisterError::InviteBase64`] for malformed armouring,
 /// [`RegisterError::InvitePostcard`] for malformed inner payload.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
 pub(crate) fn parse_invite(armoured: &str) -> Result<SignedInvite, RegisterError> {
     let trimmed = armoured.trim();
     let bytes = INVITE_BASE64
@@ -149,10 +139,6 @@ pub(crate) fn parse_invite(armoured: &str) -> Result<SignedInvite, RegisterError
 ///
 /// Returns [`RegisterError::InvitePostcard`] when postcard
 /// encoding fails (in practice only on out-of-memory).
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
 #[allow(
     dead_code,
     reason = "Round-trip companion to `parse_invite`; used by tests today. F-CLI.6 \
@@ -174,10 +160,6 @@ pub(crate) fn encode_invite(invite: &SignedInvite) -> Result<String, RegisterErr
 ///
 /// Returns [`RegisterError::InvitePrompt`] when stdin is closed or
 /// the read syscall fails.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
 #[allow(
     clippy::print_stdout,
     reason = "user-facing CLI output: the prompt is the only way an operator knows \
@@ -206,10 +188,6 @@ pub(crate) fn read_invite_from_stdin() -> Result<String, RegisterError> {
 /// Forwards any [`bibeam_discovery::DiscoveryError`] verbatim. The
 /// bootstrap is not retriable at this layer; the caller decides.
 #[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
-#[allow(
     dead_code,
     reason = "wired into the up flow after F-CLI.6 lands real config (CoordinatorPool \
               + PasetoVerifier come from config). Reachable through the integration \
@@ -232,10 +210,6 @@ pub(crate) async fn run_bootstrap(
 /// Bundled into a struct so the path-derivation helpers in this
 /// module stay testable without spelunking through a `directories`
 /// project handle (tests pass a temp-dir override).
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
 #[derive(Debug, Clone)]
 pub(crate) struct StatePaths {
     /// `<config_dir>/state.key` — the 32-byte AEAD key file.
@@ -284,10 +258,6 @@ impl StatePaths {
 /// - [`RegisterError::StateBlobTooShort`] if the key file exists
 ///   but is the wrong length — likely an externally tampered file.
 #[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
-#[allow(
     dead_code,
     reason = "wired into the up flow after F-CLI.6 lands. Today's integration tests \
               call this directly to seed the persist helpers."
@@ -327,10 +297,6 @@ pub(crate) fn load_or_create_state_key(
 ///   unlikely with `ChaCha20-Poly1305`).
 /// - [`RegisterError::StateIo`] on filesystem failures.
 #[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
-#[allow(
     dead_code,
     reason = "wired into the up flow after F-CLI.6 lands. Today's integration tests \
               exercise persist_session / load_session as a pair."
@@ -361,10 +327,6 @@ pub(crate) fn persist_session(
 /// - [`RegisterError::StateAead`] on auth-tag verify failure
 ///   (wrong key, tampered blob, or wrong AAD).
 /// - [`RegisterError::StateIo`] on filesystem failures.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see RegisterError for the rustc-vs-clippy rationale."
-)]
 #[allow(
     dead_code,
     reason = "wired into the up flow after F-CLI.6 lands. Today's integration tests \

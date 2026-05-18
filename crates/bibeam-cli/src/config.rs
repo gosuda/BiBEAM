@@ -60,12 +60,6 @@ const DEFAULT_CONFIG_TOML: &str = "\
 ";
 
 /// Errors emitted by the config helpers.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 #[derive(Debug, Error)]
 pub(crate) enum ConfigError {
     /// No home directory is available — `directories::ProjectDirs::from`
@@ -96,10 +90,6 @@ pub(crate) enum ConfigError {
 /// env overlay does not fall over on the missing keys; the
 /// `Default` impl is empty (all `None`) which means "use the
 /// in-code defaults the consumer carries".
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub(crate) struct Config {
     /// Local SOCKS5 bind address used by the F-CLI.8 fallback.
@@ -123,10 +113,6 @@ pub(crate) struct Config {
 /// Returns [`ConfigError::NoHome`] when
 /// `directories::ProjectDirs::from` returns [`None`] — a host
 /// with no home directory available.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 pub(crate) fn config_dir() -> Result<PathBuf, ConfigError> {
     let dirs = directories::ProjectDirs::from("", "BiBeam", "bibeam").ok_or(ConfigError::NoHome)?;
     Ok(dirs.config_dir().to_owned())
@@ -140,10 +126,6 @@ pub(crate) fn config_dir() -> Result<PathBuf, ConfigError> {
 ///
 /// Returns [`ConfigError::NoHome`] when no home directory is
 /// available.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 pub(crate) fn config_file_path() -> Result<PathBuf, ConfigError> {
     Ok(config_dir()?.join(CONFIG_FILENAME))
 }
@@ -163,10 +145,6 @@ pub(crate) fn config_file_path() -> Result<PathBuf, ConfigError> {
 /// supplied and no home directory is available;
 /// [`ConfigError::Load`] for figment merge / parse / decode
 /// failures.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 pub(crate) fn load_config(path_override: Option<&Path>) -> Result<Config, ConfigError> {
     let resolved = match path_override {
         Some(path) => path.to_owned(),
@@ -187,10 +165,6 @@ pub(crate) fn load_config(path_override: Option<&Path>) -> Result<Config, Config
 /// - [`ConfigError::AlreadyExists`] when the target file
 ///   already exists (F-CLI.6 contract: `init` is non-destructive).
 /// - [`ConfigError::Io`] on filesystem failures.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 pub(crate) fn write_default_config(path_override: Option<&Path>) -> Result<PathBuf, ConfigError> {
     let resolved = match path_override {
         Some(path) => path.to_owned(),
@@ -216,10 +190,6 @@ pub(crate) fn write_default_config(path_override: Option<&Path>) -> Result<PathB
 /// Propagates any [`ConfigError`] verbatim, wrapped in an
 /// "init" context.
 #[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
-#[allow(
     clippy::unused_async,
     reason = "async-shaped to keep the cli.rs dispatch table uniform; later sub-items \
               that add filesystem permission-tweaks or daemonisation handshakes here \
@@ -243,10 +213,6 @@ pub(crate) async fn run_init(path_override: Option<&Path>) -> Result<()> {
 /// Propagates any [`ConfigError`] verbatim, wrapped in a
 /// "config" context. Also surfaces TOML serialisation errors
 /// (vanishingly rare for a struct of `Option<...>` fields).
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see ConfigError for the rustc-vs-clippy rationale."
-)]
 #[allow(
     clippy::unused_async,
     reason = "async-shaped to keep the cli.rs dispatch table uniform; the figment loader \

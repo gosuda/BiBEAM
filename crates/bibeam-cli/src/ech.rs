@@ -31,12 +31,6 @@ use thiserror::Error;
 /// match the operator-runbook convention; TOML keys and string
 /// literals alike are stable across config-file edits and env
 /// overlays.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: rustc's `unreachable_pub` rejects bare `pub` on items \
-              consumed only by sibling private modules; clippy disagrees. We side with \
-              rustc, the load-bearing lint."
-)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum EchPolicy {
@@ -69,10 +63,6 @@ impl fmt::Display for EchPolicy {
 
 /// Error returned by [`EchPolicy::from_str`] when the input is
 /// not one of the documented kebab-case names.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see EchPolicy for the rustc-vs-clippy rationale."
-)]
 #[derive(Debug, Error, PartialEq, Eq)]
 #[error("ech-policy: unknown value {value:?} — accepted: \"best-effort\", \"deferred\"")]
 pub(crate) struct EchPolicyParseError {
@@ -96,10 +86,6 @@ impl FromStr for EchPolicy {
 /// status. Bracketed in `#[allow(clippy::print_stdout)]` because
 /// it lands on stdout for the `status` subcommand (the operator
 /// scripting hook) rather than the JSON tracing layer.
-#[allow(
-    clippy::redundant_pub_crate,
-    reason = "binary-only crate: see EchPolicy for the rustc-vs-clippy rationale."
-)]
 #[allow(
     clippy::print_stdout,
     reason = "user-facing CLI output, not log: `bibeam status` is the documented \
