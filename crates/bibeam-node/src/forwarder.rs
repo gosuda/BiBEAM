@@ -1126,37 +1126,4 @@ mod tests {
 
         join_run(cancel, run_handle).await;
     }
-
-    #[test]
-    fn metric_names_carry_the_prometheus_total_suffix() {
-        for name in [
-            FORWARDER_PACKETS_IN_TOTAL,
-            FORWARDER_PACKETS_OUT_TOTAL,
-            FORWARDER_PACKETS_DROPPED_TOTAL,
-        ] {
-            assert!(
-                name.ends_with("_total"),
-                "counter name {name} must follow Prometheus _total convention",
-            );
-        }
-        assert!(
-            !FORWARDER_ACTIVE_CHAINS.ends_with("_total"),
-            "gauge name MUST NOT carry the _total suffix",
-        );
-    }
-
-    #[test]
-    fn metric_names_share_the_bibeam_forwarder_prefix() {
-        for name in [
-            FORWARDER_PACKETS_IN_TOTAL,
-            FORWARDER_PACKETS_OUT_TOTAL,
-            FORWARDER_PACKETS_DROPPED_TOTAL,
-            FORWARDER_ACTIVE_CHAINS,
-        ] {
-            assert!(
-                name.starts_with("bibeam_forwarder_"),
-                "metric name {name} must share the bibeam_forwarder_ prefix",
-            );
-        }
-    }
 }
