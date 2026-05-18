@@ -5,7 +5,7 @@
 //! and clients (or any verifier that holds the matching public key)
 //! validate them via [`PasetoVerifier::verify`]. Each token's payload
 //! carries the typed [`SessionClaims`] from
-//! [`bibeam_protocol::claims`] — the canonical authorisation record
+//! [`bibeam_core::claims`] — the canonical authorisation record
 //! the coordinator hands to a peer at registration time.
 //!
 //! ## Wire format
@@ -19,7 +19,7 @@
 //! enforce expiry without the caller having to bring custom validator
 //! logic.
 
-use bibeam_protocol::claims::SessionClaims;
+use bibeam_core::claims::SessionClaims;
 use core::convert::TryFrom;
 use pasetors::claims::{Claims, ClaimsValidationRules};
 use pasetors::keys::{AsymmetricPublicKey, AsymmetricSecretKey};
