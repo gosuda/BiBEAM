@@ -119,8 +119,7 @@ pub fn build_router(ready_latch: bibeam_runtime::ReadyLatch, metrics: Router) ->
         .route("/api/v1/match", post(handle_match))
         .route("/api/v1/heartbeat", post(handle_heartbeat))
         .route("/api/v1/disconnect", post(handle_disconnect))
-        .route("/api/v1/events", get(handle_ws))
-        .route("/ws", get(handle_ws));
+        .route("/api/v1/events", get(handle_ws));
     Router::new().merge(control).merge(health).merge(metrics)
 }
 
