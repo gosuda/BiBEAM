@@ -12,8 +12,8 @@ The current state of the two daemons:
 
 | Binary | What it does today |
 |---|---|
-| `bibeam-node` | Prints `bootstrap version=0.0.1` and waits for SIGINT, then exits cleanly with status 0. No network listener, no storage, no config file. |
-| `bibeam-cli` | Same as above. No connection to a coordinator. |
+| `bibeam-node` | Logs `bootstrap` and exits cleanly; optional flags such as `--is-coordinator` or `--forwarder` only mount or bind scaffolds, not a full daemon. |
+| `bibeam-cli` | Exposes a real subcommand surface (`init`, `up`, `down`, `status`, `config`, `version`), but the end-to-end tunnel / coordinator workflow is still incomplete. |
 
 There is still **no externally reachable** REST API, `/metrics`, `/healthz`, or `/readyz` listener wired into the shipped binaries by default, and no fully wired cohort-admission / pkarr-fallback daemon path yet. Some flags and helper modules now exist, but the end-to-end operator workflow is still incomplete.
 
@@ -34,14 +34,14 @@ Binaries land in `target/release/`.
 
 ### Run the smoke test
 
-Each binary is exercised by the same one-liner:
+Each binary has its own smoke one-liner:
 
 ```bash
-./target/release/bibeam-node   # logs bootstrap; optional flags may bind scaffolds, but full daemon boot is still incomplete
-# Ctrl-C to send SIGINT; process exits 0.
+./target/release/bibeam-node            # logs bootstrap and exits 0
+./target/release/bibeam version         # prints the CLI version and exits 0
 ```
 
-This is the entire Phase 1 operator contract. The point of running it today is to verify the toolchain, the build, and the strict regime end-to-end. Repeat for `bibeam-cli`.
+This is the entire current operator contract. The point of running these today is to verify the toolchain, the build, and the strict regime end-to-end.
 
 ### Confirming the strict regime
 

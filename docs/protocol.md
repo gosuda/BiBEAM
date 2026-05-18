@@ -16,7 +16,7 @@ Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST o
 
 - **Long-term peer identity.** Ed25519 keypair. The 32-byte public key is the canonical peer ID, and a ULID-derived 16-byte tag is the routing alias used in postcard frames (the full key is exchanged at registration; the alias is what flies on the wire).
 - **Static key for WireGuard.** X25519 keypair used for the WireGuard handshake (boringtun). Exits advertise their public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response and associated coordinator control-plane state, not from the PASETO token itself.
-- **Invite material.** Each invite encodes a coordinator-signed bundle `{invite_id, max_uses, expires_at, signature}`. Invite admission proves possession of a fresh invite to the coordinator; the coordinator records the use and decrements `remaining_uses`.
+- **Invite material.** Each invite carries `code`, `issuer`, `issued_at`, optional `expires_at`, and an Ed25519 `signature` over that tuple. Redemption budget is tracked server-side in the coordinator's `RedemptionLedger`, not encoded into the signed wire shape.
 
 ## PASETO session tokens
 
@@ -88,7 +88,7 @@ Backs the **anonymity-set floor of 30 users at admission** declared as decision 
 ```
 
 - **pending.** A client has called `POST /api/v1/match`, the coordinator has chosen a candidate exit, but the candidate cohort on that exit has not yet reached the floor (default 30). The match request blocks (with a short server-side timeout returning `admission.insufficient_cohort` so the client can retry with backoff) until enough pending peers accumulate.
-- **live.** Cohort size reached the floor; coordinator mints PASETO tokens for every pending member of the cohort in a single batch and transitions them to live. From this point the cohort is bound to the exit until the rotation deadline (15 min / 500 MB cumulative).
+- **live.** Cohort size reached the floor; coordinator mints PASETO tokens for every pending member of the cohort in a single batch and transitions them to live. From this point the cohort is bound to the exit until the current rotation deadline (15 minutes today; byte-cap enforcement remains a follow-up side-table / scheduler path rather than an active token field).
 - **re-pool.** When the coordinator later pushes a `CoordinatorEvent::CohortRotated` frame on `/api/v1/events`, the client re-enters the same `/api/v1/match` flow for a fresh assignment. The cohort on the old exit shrinks. Decay within a cohort (sessions ending naturally) is bounded by the rotation window and accepted as the MVP trade-off — there is no continuous re-gating between rotations.
 
 The floor is configurable but defaults to 30. Lower floors are permitted for development networks; production deployments must run with ≥ 30 or refuse to mint tokens.
