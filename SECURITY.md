@@ -13,7 +13,7 @@ BiBeam is **not** Tor and does not aim to be. Full enumeration lives in [`docs/t
 - A curious exit operator inspecting the traffic it forwards.
 - A curious coordinator operator inspecting metadata (registration, matchmaking).
 - Honest-but-curious peers in the shared exit pool.
-- Replay, downgrade, and impersonation against the control plane (PASETO + Noise IK).
+- Replay, downgrade, and impersonation against the control plane (PASETO + WireGuard handshake).
 
 **Out of scope (explicitly).**
 

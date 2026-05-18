@@ -15,7 +15,7 @@ The current state of the two daemons:
 | `bibeam-node` | Prints `bootstrap version=0.0.1` and waits for SIGINT, then exits cleanly with status 0. No network listener, no storage, no config file. |
 | `bibeam-cli` | Same as above. No connection to a coordinator. |
 
-There is **no** REST API, **no** `/metrics`, **no** `/healthz`, **no** `/readyz`, **no** `--config` flag, **no** redb storage, **no** Noise tunnel, **no** cohort admission, **no** pkarr fallback. None of this is wired up.
+There is **no** REST API, **no** `/metrics`, **no** `/healthz`, **no** `/readyz`, **no** `--config` flag, **no** redb storage, **no** cohort admission, **no** pkarr fallback. None of this is wired up.
 
 ### Build
 
@@ -67,7 +67,7 @@ Once the daemons accept network connections, the expected host setup on Oracle A
 
 ```bash
 sudo apt-get install -y curl ca-certificates build-essential pkg-config libssl-dev
-sudo ufw allow 4433/udp        # QUIC data plane (chosen port)
+sudo ufw allow 4433/udp        # WireGuard data plane (chosen port)
 sudo ufw allow 8443/tcp        # coordinator REST + WS
 # /metrics, /healthz, /readyz bind loopback only — no firewall rule needed
 ```

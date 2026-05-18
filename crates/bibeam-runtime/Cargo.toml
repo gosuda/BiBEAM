@@ -24,12 +24,9 @@ tracing-error = { workspace = true }
 metrics = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
 figment = { workspace = true }
-clap = { workspace = true }
 axum = { workspace = true }
-tower-http = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-anyhow = { workspace = true }
 mimalloc = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -38,6 +35,5 @@ tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true
-
 [package.metadata.cargo-machete]
-ignored = ["bibeam-core", "tokio", "tokio-util", "tracing", "tracing-subscriber", "tracing-error", "metrics", "metrics-exporter-prometheus", "figment", "clap", "axum", "tower-http", "serde", "thiserror", "anyhow", "mimalloc"]
+ignored = ["bibeam-core", "tokio", "tokio-util", "tracing", "tracing-subscriber", "tracing-error", "metrics", "metrics-exporter-prometheus", "figment", "axum", "serde", "thiserror", "mimalloc"]

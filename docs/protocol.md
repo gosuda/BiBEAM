@@ -10,52 +10,13 @@ Endianness: all multi-byte integers postcard emits are little-endian varints; fr
 
 ## Transport
 
-- **Data plane.** [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) using [Quinn](https://docs.rs/quinn) 0.11.x with the rustls-ring crypto provider. Bulk packet payloads ride [QUIC unreliable datagrams (RFC 9221)](https://datatracker.ietf.org/doc/html/rfc9221). Reliable side-channels (control messages within a session) ride QUIC streams.
-- **Control plane.** REST over HTTPS plus WebSocket subscriptions, both served by [axum](https://docs.rs/axum) on the coordinator. Bodies are JSON for human debuggability; the WS subscription stream carries postcard frames inside binary WS messages.
-
-### Layering: Noise runs over QUIC, not as QUIC
-
-QUIC's own TLS 1.3 layer provides the network-level secure channel: server authentication via the exit's QUIC cert chain, packet protection on the wire, congestion control. Noise IK runs **on top of that QUIC connection as an application-layer end-to-end channel** between client and exit. Noise does not replace QUIC's packet protection; it adds a second envelope. The two AEAD layers are nested, not alternatives — Noise owns the payload contents inside QUIC frames; QUIC owns the transport.
-
-### QUIC mapping contract
-
-Each established client-to-exit QUIC connection carries two reliable stream channels plus one datagram channel. The data channel rides QUIC unreliable datagrams (RFC 9221) and is recognized by being a datagram, not by stream order; the two stream channels are recognized by client-initiated open order.
-
-**Stream channels.** Stream IDs are not fixed by this spec — Quinn allocates them in standard order — but role-to-open-order is normative. The client opens exactly two client-initiated bidirectional streams per connection, in this order:
-
-1. **Handshake stream** (first client-initiated bidi stream). Carries two postcard-encoded Noise IK messages: client → exit, then exit → client. The stream closes cleanly after message 2 is delivered.
-2. **Control stream** (second client-initiated bidi stream, opened immediately after handshake completion). Carries Noise-sealed postcard frames for rekey salts, rotation announcements, byte-budget accounting, and `ProtocolError` reports. The stream remains open for the lifetime of the session.
-
-The exit MUST NOT open additional streams to the client in either direction. A peer that receives a client-initiated stream beyond the second, or any server-initiated stream, MUST close that stream with the QUIC application error code corresponding to `proto.stream_unexpected`.
-
-**Datagram channel.** After handshake completion, both sides MAY send QUIC unreliable datagrams. Each datagram payload is exactly one Noise-AEAD-sealed postcard data frame carrying an L3 IP packet; no fragmentation of a sealed frame across datagrams and no batching of multiple sealed frames into one datagram. Datagrams received before handshake completion MUST be dropped without error.
+Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST over HTTPS plus WebSocket on axum.
 
 ## Identity and keys
 
 - **Long-term peer identity.** Ed25519 keypair. The 32-byte public key is the canonical peer ID, and a ULID-derived 16-byte tag is the routing alias used in postcard frames (the full key is exchanged at registration; the alias is what flies on the wire).
-- **Static key for Noise IK.** X25519 keypair, distinct from the Ed25519 identity. Exits advertise their static public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response, signed by the coordinator inside the PASETO token.
+- **Static key for WireGuard.** X25519 keypair used for the WireGuard handshake (boringtun). Exits advertise their public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response, signed by the coordinator inside the PASETO token.
 - **Invite material.** Each invite encodes a coordinator-signed bundle `{invite_id, max_uses, expires_at, signature}`. Invite admission proves possession of a fresh invite to the coordinator; the coordinator records the use and decrements `remaining_uses`.
-
-## Noise IK handshake
-
-Pattern: `Noise_IK_25519_ChaChaPoly_BLAKE3`, run by [snow](https://docs.rs/snow) 0.10 with the `ring-accelerated` backend.
-
-- **IK** — the client knows the responder's static key (acquired from the coordinator) before the handshake begins. Standard one-RTT exchange, suitable for client-initiated connections to known exits.
-- **25519** — X25519 for ephemeral and static key agreement.
-- **ChaChaPoly** — ChaCha20-Poly1305 AEAD for transport keys.
-- **BLAKE3** — hash function for the Noise mixing chain.
-
-Handshake payloads:
-
-- **Message 1 (`e, es, s, ss`).** Client → Exit. Payload carries the PASETO session token issued by the coordinator and a postcard-encoded `ClientHello { proto_version, capabilities }`.
-- **Message 2 (`e, ee, se`).** Exit → Client. Payload carries `ExitAck { transport_params, session_alias }`.
-
-After message 2, both sides derive symmetric transport keys (`k1`, `k2`) from the Noise mixing chain and switch to AEAD-per-packet sealing of QUIC datagrams.
-
-### Key schedule
-
-- Noise establishes the initial transport keys after handshake completion (Noise spec `Split()` output).
-- Rekey happens when either side has sealed `2^20` packets under the current key, or at exit-driven rotation (every 15 min / 500 MB), whichever comes first. Rekey is a HKDF-BLAKE3 derivation from the current chaining key + a fresh 16-byte salt exchanged on a reliable stream.
 
 ## PASETO session tokens
 
@@ -113,11 +74,10 @@ Errors carry a stable string code plus a human-readable message. Codes form a cl
 | `token.expired` | 401 | `exp` in the past |
 | `token.replay` | 409 | `jti` previously seen |
 | `proto.version_unsupported` | 426 | `proto_version` not accepted |
-| `proto.stream_unexpected` | n/a (QUIC stream close only) | Peer opened a stream beyond the two-stream topology defined in [QUIC mapping contract](#quic-mapping-contract); raised only on the data plane. |
 | `rate.limited` | 429 | Per-peer rate limit hit |
 | `internal` | 500 | Anything not explicitly mapped above |
 
-Data-plane equivalents (carried inside Noise-sealed protocol frames) reuse the same string codes inside a `ProtocolError { code, message }` frame.
+Data-plane equivalents (carried inside WireGuard-sealed protocol frames) reuse the same string codes inside a `ProtocolError { code, message }` frame.
 
 ## Cohort admission lifecycle
 
