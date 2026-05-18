@@ -26,7 +26,21 @@
 //! accessor.
 
 use bibeam_core::PeerId;
-use bibeam_node::rate_limit::NodeRateLimiter;
+use bibeam_node::coordinator::rate_limit::{
+    RateLimitConfigError as CoordinatorRateLimitConfigError, RouteLimiter,
+};
+use bibeam_node::rate_limit::{
+    NodeRateLimiter, RateLimitConfigError as SharedRateLimitConfigError,
+};
+
+/// The coordinator module keeps its historical public import path,
+/// but the type is now the shared data-plane config-error enum.
+#[test]
+fn coordinator_rate_limit_config_error_reexport_is_shared_type() {
+    let err: SharedRateLimitConfigError =
+        RouteLimiter::new("register", 0, None).expect_err("zero budget is rejected");
+    let _: CoordinatorRateLimitConfigError = err;
+}
 
 /// Admitting N distinct peers populates the per-peer map with
 /// exactly N entries. No eviction trims the map; the residency
