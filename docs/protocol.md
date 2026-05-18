@@ -15,7 +15,7 @@ Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST o
 ## Identity and keys
 
 - **Long-term peer identity.** Ed25519 keypair. The 32-byte public key is the canonical peer ID, and a ULID-derived 16-byte tag is the routing alias used in postcard frames (the full key is exchanged at registration; the alias is what flies on the wire).
-- **Static key for WireGuard.** X25519 keypair used for the WireGuard handshake (boringtun). Exits advertise their public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response, signed by the coordinator inside the PASETO token.
+- **Static key for WireGuard.** X25519 keypair used for the WireGuard handshake (boringtun). Exits advertise their public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response and associated coordinator control-plane state, not from the PASETO token itself.
 - **Invite material.** Each invite encodes a coordinator-signed bundle `{invite_id, max_uses, expires_at, signature}`. Invite admission proves possession of a fresh invite to the coordinator; the coordinator records the use and decrements `remaining_uses`.
 
 ## PASETO session tokens
@@ -32,7 +32,7 @@ The implementation stores the typed session payload under a single custom JSON c
 | `exit_set` | array of strings | Exit nodes the peer is authorised to route through |
 | `path` | array of strings | Ordered forwarder chain for this session (last entry is the exit) |
 
-At the PASETO layer itself, the issuer also sets standard `iat`, `nbf`, and `exp` claims. Footer: a JSON object `{ \"kid\": \"<coord-key-id>\" }` so the verifier can pick the right verification key from the coordinator's published key set.
+The current implementation uses standard `iat`, `nbf`, and `exp` claims at the PASETO layer. It does **not** currently attach a footer / `kid`; the verifier is configured with the coordinator key it should trust and then decodes the `bibeam_session` custom claim.
 
 Verification path on the exit/client side: parse `v4.public`, verify the signature with the coordinator's key set, apply the default `iat` / `nbf` / `exp` validation rules, then deserialize the `bibeam_session` custom claim into `SessionClaims`.
 

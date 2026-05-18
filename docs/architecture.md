@@ -2,7 +2,7 @@
 
 비빔 = mixing. Two planes: a thin control plane that brokers introductions, and a data plane that runs the mixed traffic. Everything else is a detail of one of those two.
 
-This file is the **as-designed** spec. The Phase 1 init scaffold contains crate skeletons only — no protocol code, no coordinator code, no tunnel code. Where a section describes behaviour, that behaviour is the target, not the current state. Phase boundaries are called out inline.
+This file is the **current architecture reference**. The repository is no longer an empty crate scaffold: protocol/control-plane code, coordinator modules, and data-plane helpers now exist, but several paths are still partial or scaffolded. Where a section describes behaviour, treat it as the current intended contract unless a subsection explicitly calls out a future phase.
 
 ## Two-plane overview
 

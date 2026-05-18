@@ -2,7 +2,7 @@
 
 비빔 makes a specific bargain: trade Tor-grade anonymity for usable latency and a defensible answer to "is the lone user behind this exit *you*?" This file enumerates who the adversaries are, what each can see, and how the design responds.
 
-The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the architecture in [`docs/architecture.md`](./architecture.md). Phase 1 ships crate skeletons only — the mitigations below are design intent, not measured properties of running code.
+The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the architecture in [`docs/architecture.md`](./architecture.md). The repository now contains real protocol/control-plane code, but the mitigations below are still design intent rather than measured production guarantees.
 
 ## Out of scope (stated up front so creep cannot reintroduce them)
 

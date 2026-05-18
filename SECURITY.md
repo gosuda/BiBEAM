@@ -1,6 +1,6 @@
 # Security
 
-BiBeam is in **Phase 1 init scaffold**. No protocol code has been written yet; there is nothing to attack on the data plane. This file describes the threat model BiBeam is designed against, the disclosure path for when there is something to disclose, and what is explicitly out of scope.
+BiBeam has moved beyond the empty init scaffold: protocol, discovery, coordinator, and transport-adjacent code now exist, but the system is still incomplete and not production-ready. This file describes the threat model BiBeam is designed against, the disclosure path for when there is something to disclose, and what is explicitly out of scope.
 
 ## Threat model — summary
 
