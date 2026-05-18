@@ -31,28 +31,28 @@ The protocol it describes lives in [`docs/protocol.md`](./protocol.md); the arch
 
 ### The user's ISP (and any on-path observer between user and exit)
 
-**Capability.** Observes every packet between the user's modem and the exit's IP. Can see the exit's IP, packet timing, byte volumes, and that the link is QUIC.
+**Capability.** Observes every packet between the user's modem and the exit's IP. Can see the exit's IP, packet timing, byte volumes, and that the link is WireGuard/UDP.
 
 **Visibility.**
 
-- Destination SNI: **not visible** on this hop. The user-to-exit link carries Noise-sealed traffic inside QUIC datagrams. The ISP sees only the exit's IP and a QUIC handshake, with no information about what the user is fetching.
+- Destination SNI: **not visible** on this hop. The user-to-exit link carries WireGuard-encrypted traffic. The ISP sees only the exit's IP and a WireGuard handshake, with no information about what the user is fetching.
 - Exit IP: visible. The ISP knows the user talks to this exit; it does not know what the user does through it.
 - Traffic volume and timing: visible. Long-term flow analysis can correlate that the user is online and using BiBeam; it does not reveal the content.
 
 **Mitigations.**
 
-- **Noise IK over QUIC.** All data-plane traffic is sealed by Noise (ChaCha20-Poly1305) inside QUIC's own packet protection. The ISP sees encrypted bytes.
+- **WireGuard.** All data-plane traffic is encrypted by WireGuard (ChaCha20-Poly1305). The ISP sees encrypted bytes.
 - **Datagram-based transport.** No reliable-stream side-channel for content; the ISP cannot reconstruct application-layer flows even with deep packet inspection.
 - **Exit diversity.** The set of exits used by a single user changes every rotation, blurring any "this user always talks to exit X" pattern.
 
 ### A curious exit operator
 
-**Capability.** Runs the exit binary. Terminates the user-to-exit QUIC connection. Sees each connecting client's source IP, the PASETO session alias bound to that connection, decrypted L3 IP frames as they egress, and the destination IP/port of every onward connection. Sees inner SNI when the destination does not advertise ECH.
+**Capability.** Runs the exit binary. Terminates the user-to-exit WireGuard tunnel. Sees each connecting client's source IP, the PASETO session alias bound to that connection, decrypted L3 IP frames as they egress, and the destination IP/port of every onward connection. Sees inner SNI when the destination does not advertise ECH.
 
 **Visibility — be precise about what is and is not unlinkable.** The exit-operator threat splits into two distinct questions, and they have different answers:
 
 1. **Can the destination identify the user?** *No, not from network metadata.* The destination sees only the exit's IP, with traffic that may belong to any user in the current cohort. This is the property pool mixing buys.
-2. **Can the exit itself link a specific egress packet back to a specific client?** *Yes.* Because the exit terminates the user-to-exit QUIC connection, every Noise-sealed packet arrives on a specific connection bound to a specific client source IP and session alias. The exit can correlate "client at source IP A, session alias S sent these L3 frames, which I forwarded to destination D." Pool mixing does **not** break that link — mixing produces unlinkability against observers downstream of the exit, not against the exit itself.
+2. **Can the exit itself link a specific egress packet back to a specific client?** *Yes.* Because the exit terminates the user-to-exit WireGuard tunnel, every WireGuard-encrypted packet arrives on a specific session bound to a specific client source IP and session alias. The exit can correlate "client at source IP A, session alias S sent these L3 frames, which I forwarded to destination D." Pool mixing does **not** break that link — mixing produces unlinkability against observers downstream of the exit, not against the exit itself.
 
 So the exit knows:
 
@@ -105,7 +105,7 @@ And does **not** know:
 
 **Mitigations.**
 
-- **Per-session Noise keys.** Each client-to-exit session has independent transport keys.
+- **Per-session WireGuard keys.** Each client-to-exit session has independent WireGuard keys.
 - **No peer-to-peer signalling through the exit.** The exit forwards L3 packets toward the public Internet, not laterally to other cohort members.
 - **Coordinator gating.** A peer attempting to flood admission with many invites to dominate a cohort runs into per-invite rate limits and the invite-distribution chokepoint.
 
@@ -169,7 +169,7 @@ Client and exit each generate their own X25519 WG keypairs at registration time 
 
 - **Replay.** PASETO `jti` is a UUID v7 and is checked against a per-exit seen-set retained until each token's `exp` passes (TTL-keyed, no capacity-driven eviction). Tokens are bound to a single exit via `aud`; replay against a different exit fails the `aud` check.
 - **Downgrade.** `proto_version` in `ClientHello` and the PASETO claim must match. There is no negotiation step a MITM can use to push both sides to a weaker version.
-- **Impersonation.** Exit static keys are coordinator-signed inside the match response. A client checks the signature before initiating the Noise handshake; a network attacker cannot substitute a static key without forging the coordinator's signature.
+- **Impersonation.** Exit static keys are coordinator-signed inside the match response. A client checks the signature before initiating the WireGuard handshake; a network attacker cannot substitute a static key without forging the coordinator's signature.
 
 ## What we do not promise
 
