@@ -14,7 +14,7 @@
 //!   [`bibeam_protocol::control::Heartbeat`], response: empty body.
 //! - `POST /api/v1/disconnect` — bearer token; body:
 //!   [`bibeam_protocol::control::Disconnect`], response: empty body.
-//! - `GET /ws` — WebSocket upgrade with bearer token; emits
+//! - `GET /api/v1/events` — WebSocket upgrade with bearer token; emits
 //!   [`bibeam_discovery::CoordinatorEvent`] envelopes.
 //! - `GET /healthz` + `GET /readyz` — composed from
 //!   [`bibeam_runtime::health_router`].

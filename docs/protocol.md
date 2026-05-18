@@ -6,7 +6,7 @@ This file is the **current protocol/reference shape** for the coordinator contro
 
 Coordinator-facing control-plane traffic uses [JSON](https://www.json.org/) over HTTPS and WebSocket text frames. Lower-level protocol structs in [`bibeam-protocol`](../crates/bibeam-protocol) also derive [postcard](https://docs.rs/postcard) when modules need compact binary serialization (for example relay frames and lease metadata), but the public coordinator API is JSON, not postcard.
 
-The `WireGuard` data plane is **not** `postcard`-framed: once a session is admitted, payload traffic rides opaque `WireGuard` packets over UDP. BiBeam's own typed protocol surface covers only the control plane, token claims, and forwarder/lease metadata around that traffic.
+The direct `WireGuard` data plane is **not** `postcard`-framed: once a session is admitted, client↔exit payload traffic rides opaque `WireGuard` packets over UDP. BiBeam's own typed protocol surface covers only the control plane plus the relay/lease metadata that surrounds those packets when a `WireGuard` payload is wrapped for forwarding.
 
 ## Transport
 
@@ -16,7 +16,7 @@ Data plane speaks WireGuard wire protocol via boringtun. Control plane is REST o
 
 - **Long-term peer identity.** Ed25519 keypair. The 32-byte public key is the canonical peer ID, and a ULID-derived 16-byte tag is the routing alias used in postcard frames (the full key is exchanged at registration; the alias is what flies on the wire).
 - **Static key for WireGuard.** X25519 keypair used for the WireGuard handshake (boringtun). Exits advertise their public key through the coordinator's exit catalog. Clients learn an exit's static key as part of the match response and associated coordinator control-plane state, not from the PASETO token itself.
-- **Invite material.** Each invite carries `code`, `issuer`, `issued_at`, optional `expires_at`, and an Ed25519 `signature` over that tuple. Redemption budget is tracked server-side in the coordinator's `RedemptionLedger`, not encoded into the signed wire shape.
+- **Invite material.** Each invite carries `code`, `issuer`, `issued_at`, optional `expires_at`, and an Ed25519 `signature` over the domain-separated `(code, issued_at, expires_at)` payload. `issuer` is an unsigned routing hint checked against the trusted coordinator key at verification time. Redemption budget is tracked server-side in the coordinator's `RedemptionLedger`, not encoded into the signed wire shape.
 
 ## PASETO session tokens
 
