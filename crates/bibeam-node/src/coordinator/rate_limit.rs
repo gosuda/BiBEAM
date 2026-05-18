@@ -47,6 +47,8 @@ use core::net::IpAddr;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
+pub use crate::rate_limit::RateLimitConfigError;
+
 use bibeam_core::PeerId;
 use governor::clock::DefaultClock;
 use governor::state::keyed::DefaultKeyedStateStore;
@@ -97,18 +99,6 @@ pub struct RateLimitDenied {
     pub route: &'static str,
     /// What was throttled: `"ip:<addr>"` or `"peer:<id>"`.
     pub scope: String,
-}
-
-/// Configuration error returned when a per-minute cap is zero
-/// (which would mean "block everyone" and is never a valid input).
-#[derive(Debug, Error)]
-pub enum RateLimitConfigError {
-    /// Caller supplied a zero cap for the named field.
-    #[error("rate-limit configuration error: `{field}` must be non-zero")]
-    ZeroBudget {
-        /// Name of the cap field that was zero.
-        field: &'static str,
-    },
 }
 
 /// Per-route rate-limit decisions.
