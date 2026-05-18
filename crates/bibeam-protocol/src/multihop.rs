@@ -279,10 +279,6 @@ impl RelayFrame {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::expect_used,
-    reason = "test-only convenience for unwrapping known-good codec round-trips"
-)]
 mod tests {
     //! Unit tests in this module cover the `RelayFrame` encode/decode
     //! contract — the fixed-prefix data-plane layout that does NOT ride

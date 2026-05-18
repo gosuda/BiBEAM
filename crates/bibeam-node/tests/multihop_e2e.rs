@@ -5,10 +5,6 @@
     reason = "integration test fixtures use unwrap/expect in setup paths"
 )]
 #![allow(
-    clippy::missing_panics_doc,
-    reason = "test functions never document panic behaviour"
-)]
-#![allow(
     clippy::indexing_slicing,
     reason = "test code indexes into freshly-built fixed-size buffers"
 )]

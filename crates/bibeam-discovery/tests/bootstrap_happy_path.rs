@@ -12,10 +12,6 @@
     clippy::unwrap_used,
     reason = "integration test fixtures use unwrap/expect in setup paths"
 )]
-#![allow(
-    clippy::missing_panics_doc,
-    reason = "test functions never document panic behaviour"
-)]
 
 use std::net::SocketAddr;
 use std::sync::{Arc, Once};

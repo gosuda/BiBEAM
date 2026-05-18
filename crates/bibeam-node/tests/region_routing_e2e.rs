@@ -4,10 +4,6 @@
     clippy::unwrap_used,
     reason = "integration test fixtures use unwrap/expect in setup paths"
 )]
-#![allow(
-    clippy::missing_panics_doc,
-    reason = "test functions never document panic behaviour"
-)]
 //! Integration tests for §11 verification gate #3 — per-region floor
 //! formalism (R-FLOOR + R-MULTIHOP-COORD's path-assembly refusal).
 //!
