@@ -768,24 +768,6 @@ mod tests {
         assert!(outcome.expect("join").is_ok(), "clean cancel returns Ok");
     }
 
-    #[tokio::test]
-    async fn noop_handler_is_object_safe_and_does_nothing() {
-        // Contract: the NoopAcceptHandler is `dyn`-compatible and
-        // returns `Ok(())` for any input. Catches a regression that
-        // accidentally added a non-object-safe constraint to the
-        // trait (e.g., a generic method, an associated type), which
-        // would fail compilation here.
-        let handler: Arc<dyn AcceptHandler> = Arc::new(NoopAcceptHandler);
-        // We cannot easily synthesize a `quinn::Connection` without a
-        // real handshake; the construction-and-storage path above is
-        // the load-bearing surface this test covers (the
-        // dyn-compatibility check is at the `Arc<dyn …>` coercion).
-        // The functional behaviour is exercised via the
-        // `accept_loop_exits_on_cancel` test, which threads
-        // `NoopAcceptHandler` through the real loop.
-        drop(handler);
-    }
-
     #[test]
     fn handler_error_wraps_display() {
         // Contract: `HandlerError::from_display` formats any
